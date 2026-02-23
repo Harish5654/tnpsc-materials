@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Success - TNPSC Materials</title>
+  <meta name="description" content="Your order has been successfully placed">
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .success-icon {
+      width: 100px;
+      height: 100px;
+      background: #4caf50;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 30px;
+      font-size: 3rem;
+      color: var(--white);
+      animation: scaleIn 0.5s ease;
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0); }
+      to { transform: scale(1); }
+    }
+    .email-sent {
+      background: #e3f2fd;
+      border: 2px solid #2196f3;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .email-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="top-bar">
+      <a href="/" class="logo">
+        <img src="/logo.png" alt="TNPSC Materials Logo" style="width: 40px; height: 40px; object-fit: contain;">
+        <span>TNPSC Materials</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Success Section -->
+  <div class="success-container">
+    <div class="success-icon">✓</div>
+    <h1>🎉 Payment Successful!</h1>
+    <p>Thank you for your purchase.</p>
+    
+    <div class="email-sent">
+      <div class="email-icon">📧</div>
+      <h3>Your PDF Has Been Sent to Your Email!</h3>
+      <p>Check your inbox (and spam folder) for the download link.</p>
+    </div>
+    
+    <div class="order-details">
+      <h3>📋 What happens next?</h3>
+      <p><strong>1.</strong> Check your email - We've sent your PDF notes</p>
+      <p><strong>2.</strong> Download and save the files</p>
+      <p><strong>3.</strong> Start preparing for your TNPSC exam!</p>
+      
+      <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-top: 20px;">
+        <p style="margin: 0; color: #2e7d32;"><strong>📚 Happy Studying!</strong></p>
+        <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Best of luck for your TNPSC exam!</p>
+      </div>
+    </div>
+    
+    <div style="margin-top: 30px;">
+      <a href="/products" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
+        Continue Shopping
+      </a>
+      <a href="/" class="btn btn-outline" style="display: inline-block; margin-left: 10px; text-decoration: none;">
+        Go to Home
+      </a>
+    </div>
+    
+    <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee;">
+      <h3 style="margin-bottom: 20px;">🛠️ Need Help?</h3>
+      <p style="color: #666;">If you haven't received your PDF within 30 minutes, please contact us:</p>
+      <p style="margin-top: 10px;">📧 support@tnpscmaterials.com</p>
+      <p>📱 +91 98765 43210</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-section">
+        <h4>TNPSC Materials</h4>
+        <p style="color: #999; margin-top: 10px;">Your trusted source for TNPSC exam preparation.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 TNPSC Materials. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Clear cart on success page load
+    localStorage.removeItem('tnpsc_cart');
+  </script>
+</body>
+</html>

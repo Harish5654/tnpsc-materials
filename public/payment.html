@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Payment - TNPSC Materials</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .payment-redirect {
+      max-width: 600px;
+      margin: 100px auto;
+      text-align: center;
+      padding: 40px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 30px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .product-info {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    .product-info h2 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .product-info .price {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .btn-pay {
+      background: #667eea;
+      color: white;
+      padding: 15px 40px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+    .btn-pay:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="top-bar">
+      <a href="/" class="logo">
+        <img src="/logo.png" alt="TNPSC Materials Logo" style="width: 40px; height: 40px; object-fit: contain;">
+        <span>TNPSC Materials</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Payment Redirect Section -->
+  <div class="payment-redirect" id="payment-product">
+    <div class="loading-spinner"></div>
+    <h1>Redirecting to Payment...</h1>
+    <p>Please wait while we redirect you to the secure payment page.</p>
+    
+    <div class="product-info" id="product-details">
+      <!-- Product details will be loaded here -->
+    </div>
+    
+    <button class="btn-pay" id="pay-button" onclick="redirectToPayment()">
+      Click here if not redirected
+    </button>
+    
+    <p style="margin-top: 20px; color: #666; font-size: 0.9rem;">
+      🔒 Secure payment powered by Razorpay
+    </p>
+  </div>
+
+  <script>
+    let paymentLink = '';
+  </script>
+  
+  <script src="/js/main.js"></script>
+</body>
+</html>

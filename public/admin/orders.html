@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Orders - TNPSC Materials Admin</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <h2>⚙️ Admin Panel</h2>
+      <nav class="admin-nav">
+        <a href="/admin">
+          <span>📊</span> <span>Dashboard</span>
+        </a>
+        <a href="/admin/products.html">
+          <span>📚</span> <span>Products</span>
+        </a>
+        <a href="/admin/orders.html" class="active">
+          <span>📋</span> <span>Orders</span>
+        </a>
+        <a href="/">
+          <span>🏠</span> <span>Back to Site</span>
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+      <div class="admin-header">
+        <h1>📋 Manage Orders</h1>
+      </div>
+      
+      <!-- Stats -->
+      <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="stat-card">
+          <h4>Total Orders</h4>
+          <div class="value" id="total-orders">-</div>
+        </div>
+        <div class="stat-card">
+          <h4>Completed</h4>
+          <div class="value" id="completed-orders">-</div>
+        </div>
+        <div class="stat-card">
+          <h4>Total Revenue</h4>
+          <div class="value" id="total-revenue">₹0</div>
+        </div>
+      </div>
+      
+      <!-- Orders Table -->
+      <div class="admin-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer Name</th>
+              <th>Email</th>
+              <th>Product</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="orders-list">
+            <tr>
+              <td colspan="8" style="text-align: center;">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    const API_URL = '/api';
+    
+    async function loadOrders() {
+      try {
+        const response = await fetch(`${API_URL}/orders`);
+        const orders = await response.json();
+        
+        // Update stats
+        document.getElementById('total-orders').textContent = orders.length;
+        
+        const completed = orders.filter(o => o.status === 'completed').length;
+        document.getElementById('completed-orders').textContent = completed;
+        
+        const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
+        document.getElementById('total-revenue').textContent = `₹${totalRevenue}`;
+        
+        // Display orders
+        const tbody = document.getElementById('orders-list');
+        
+        if (orders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No orders yet</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = orders.map(order => `
+          <tr>
+            <td>${order.id}</td>
+            <td>${order.customerName}</td>
+            <td>${order.customerEmail}</td>
+            <td>${order.productName}</td>
+            <td>₹${order.amount}</td>
+            <td><span class="status-badge status-${order.status}">${order.status}</span></td>
+            <td>${new Date(order.createdAt).toLocaleString('en-IN')}</td>
+            <td>
+              <button class="btn btn-secondary" onclick="viewOrder('${order.id}')" style="padding: 5px 10px; font-size: 0.8rem;">View</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading orders:', error);
+      }
+    }
+    
+    function viewOrder(orderId) {
+      // Could open a modal with full order details
+      alert('Order details for: ' + orderId);
+    }
+    
+    loadOrders();
+  </script>
+</body>
+</html>

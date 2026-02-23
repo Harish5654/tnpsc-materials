@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Products - TNPSC Materials Admin</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .btn-add {
+      background: #4caf50;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn-save {
+      background: #4caf50;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      flex: 1;
+    }
+    .btn-cancel {
+      background: #666;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <h2>⚙️ Admin Panel</h2>
+      <nav class="admin-nav">
+        <a href="/admin">
+          <span>📊</span> <span>Dashboard</span>
+        </a>
+        <a href="/admin/products.html" class="active">
+          <span>📚</span> <span>Products</span>
+        </a>
+        <a href="/admin/orders.html">
+          <span>📋</span> <span>Orders</span>
+        </a>
+        <a href="/">
+          <span>🏠</span> <span>Back to Site</span>
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+      <div class="admin-header">
+        <h1>📚 Manage Products</h1>
+        <button class="btn-add" onclick="showAddModal()">+ Add Product</button>
+      </div>
+      
+      <!-- Products Table -->
+      <div class="admin-table">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="products-list">
+            <tr>
+              <td colspan="6" style="text-align: center;">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Add/Edit Modal -->
+  <div class="modal" id="product-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Product</h3>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      
+      <form id="product-form">
+        <input type="hidden" id="product-id">
+        
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" id="product-name" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Description *</label>
+          <textarea id="product-description" rows="3" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Price (₹) *</label>
+          <input type="number" id="product-price" required min="1">
+        </div>
+        
+        <div class="form-group">
+          <label>Original Price (₹) *</label>
+          <input type="number" id="product-original-price" required min="1">
+        </div>
+        
+        <div class="form-group">
+          <label>Image URL *</label>
+          <input type="url" id="product-image" required>
+        </div>
+        
+        <div class="form-group">
+          <label>PDF Filename *</label>
+          <input type="text" id="product-pdf" required placeholder="e.g., general-tamil.pdf">
+        </div>
+        
+        <div class="form-group">
+          <label>Razorpay Payment Link</label>
+          <input type="url" id="product-payment-link" placeholder="e.g., https://rzp.io/rzp/xxx">
+        </div>
+        
+        <div class="form-group">
+          <label>Category</label>
+          <select id="product-category">
+            <option value="tamil">Tamil</option>
+            <option value="gk">General Knowledge</option>
+            <option value="combo">Combo</option>
+          </select>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-save">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    const API_URL = '/api';
+    
+    async function loadProducts() {
+      try {
+        const response = await fetch(`${API_URL}/products`);
+        const products = await response.json();
+        
+        const tbody = document.getElementById('products-list');
+        
+        if (products.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No products found</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = products.map(product => `
+          <tr>
+            <td>${product.id}</td>
+            <td>${product.name}</td>
+            <td>₹${product.price}</td>
+            <td>${product.category}</td>
+            <td><span class="status-badge status-${product.inStock ? 'completed' : 'pending'}">${product.inStock ? 'In Stock' : 'Out of Stock'}</span></td>
+            <td>
+              <button class="btn btn-secondary" onclick="editProduct('${product.id}')" style="padding: 5px 10px; font-size: 0.8rem;">Edit</button>
+              <button class="btn btn-primary" onclick="deleteProduct('${product.id}')" style="padding: 5px 10px; font-size: 0.8rem; background: #e53935;">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading products:', error);
+      }
+    }
+    
+    function showAddModal() {
+      document.getElementById('modal-title').textContent = 'Add Product';
+      document.getElementById('product-form').reset();
+      document.getElementById('product-id').value = '';
+      document.getElementById('product-modal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('product-modal').classList.remove('active');
+    }
+    
+    async function editProduct(id) {
+      try {
+        const response = await fetch(`${API_URL}/product/${id}`);
+        const product = await response.json();
+        
+        document.getElementById('modal-title').textContent = 'Edit Product';
+        document.getElementById('product-id').value = product.id;
+        document.getElementById('product-name').value = product.name;
+        document.getElementById('product-description').value = product.description;
+        document.getElementById('product-price').value = product.price;
+        document.getElementById('product-original-price').value = product.originalPrice;
+        document.getElementById('product-image').value = product.image;
+        document.getElementById('product-pdf').value = product.pdfFile;
+        document.getElementById('product-category').value = product.category;
+        document.getElementById('product-payment-link').value = product.paymentLink || '';
+        
+        document.getElementById('product-modal').classList.add('active');
+      } catch (error) {
+        console.error('Error loading product:', error);
+      }
+    }
+    
+    async function deleteProduct(id) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/products/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('Product deleted successfully!');
+          loadProducts();
+        } else {
+          alert('Failed to delete product');
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
+    }
+    
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const productId = document.getElementById('product-id').value;
+      const productData = {
+        name: document.getElementById('product-name').value,
+        description: document.getElementById('product-description').value,
+        price: parseInt(document.getElementById('product-price').value),
+        originalPrice: parseInt(document.getElementById('product-original-price').value),
+        image: document.getElementById('product-image').value,
+        pdfFile: document.getElementById('product-pdf').value,
+        category: document.getElementById('product-category').value,
+        paymentLink: document.getElementById('product-payment-link').value,
+        featured: false,
+        inStock: true
+      };
+      
+      try {
+        let response;
+        if (productId) {
+          // Update
+          response = await fetch(`${API_URL}/products/${productId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+        } else {
+          // Create
+          response = await fetch(`${API_URL}/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+        }
+        
+        if (response.ok) {
+          alert('Product saved successfully!');
+          closeModal();
+          loadProducts();
+        } else {
+          alert('Failed to save product');
+        }
+      } catch (error) {
+        console.error('Error saving product:', error);
+      }
+    });
+    
+    loadProducts();
+  </script>
+</body>
+</html>

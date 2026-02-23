@@ -1,0 +1,44 @@
+[
+  {
+    "id": "prod_001",
+    "name": "General Tamil Notes",
+    "description": "Handwritten PDF notes for TNPSC General Tamil preparation. Covers all important topics including grammar, literature, and language basics. Perfect for competitive exams.",
+    "price": 250,
+    "originalPrice": 499,
+    "image": "/general tamil.png",
+    "pdfFile": "General Tamil pdfs",
+    "pdfFolder": true,
+    "category": "tamil",
+    "featured": true,
+    "inStock": true,
+    "paymentLink": "https://rzp.io/rzp/h5ZM9pL"
+  },
+  {
+    "id": "prod_002",
+    "name": "General Knowledge Notes",
+    "description": "Comprehensive handwritten PDF notes for TNPSC General Knowledge. Includes history, geography, science, current affairs, and Indian polity. Essential for cracking competitive exams.",
+    "price": 250,
+    "originalPrice": 499,
+    "image": "/gk.png",
+    "pdfFile": "gk",
+    "pdfFolder": true,
+    "category": "gk",
+    "featured": true,
+    "inStock": true,
+    "paymentLink": "https://rzp.io/rzp/deer2rk"
+  },
+  {
+    "id": "prod_003",
+    "name": "Combo Pack",
+    "description": "Complete combo pack including both General Tamil and General Knowledge handwritten PDF notes. Save ₹100 by buying together. Best value for TNPSC aspirants!",
+    "price": 450,
+    "originalPrice": 550,
+    "image": "/combo.png",
+    "pdfFile": "combo",
+    "pdfFolder": true,
+    "category": "combo",
+    "featured": true,
+    "inStock": true,
+    "paymentLink": "https://rzp.io/rzp/6ZKo4vs3"
+  }
+]

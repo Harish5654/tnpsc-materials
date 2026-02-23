@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - TNPSC Materials</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .admin-header h1 {
+      margin: 0;
+    }
+    .logout-btn {
+      background: #e53935;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <h2>⚙️ Admin Panel</h2>
+      <nav class="admin-nav">
+        <a href="/admin" class="active">
+          <span>📊</span> <span>Dashboard</span>
+        </a>
+        <a href="/admin/products.html">
+          <span>📚</span> <span>Products</span>
+        </a>
+        <a href="/admin/orders.html">
+          <span>📋</span> <span>Orders</span>
+        </a>
+        <a href="/">
+          <span>🏠</span> <span>Back to Site</span>
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+      <div class="admin-header">
+        <h1>📊 Dashboard</h1>
+        <button class="logout-btn" onclick="window.location.href='/'">Logout</button>
+      </div>
+      
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h4>Total Products</h4>
+          <div class="value" id="total-products">-</div>
+        </div>
+        <div class="stat-card">
+          <h4>Total Orders</h4>
+          <div class="value" id="total-orders">-</div>
+        </div>
+        <div class="stat-card">
+          <h4>Total Revenue</h4>
+          <div class="value" id="total-revenue">₹0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Pending Orders</h4>
+          <div class="value" id="pending-orders">0</div>
+        </div>
+      </div>
+      
+      <!-- Recent Orders -->
+      <div class="admin-table">
+        <h3 style="padding: 20px; margin: 0; background: #232f3e; color: white;">Recent Orders</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Product</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="recent-orders">
+            <tr>
+              <td colspan="6" style="text-align: center;">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    const API_URL = '/api';
+    
+    // Check authentication
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) {
+      window.location.href = '/admin/login';
+    }
+    
+    async function loadDashboard() {
+      try {
+        // Load products
+        const productsRes = await fetch(`${API_URL}/products`);
+        const products = await productsRes.json();
+        document.getElementById('total-products').textContent = products.length;
+        
+        // Load orders
+        const ordersRes = await fetch(`${API_URL}/orders`);
+        const orders = await ordersRes.json();
+        
+        document.getElementById('total-orders').textContent = orders.length;
+        
+        const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
+        document.getElementById('total-revenue').textContent = `₹${totalRevenue}`;
+        
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        document.getElementById('pending-orders').textContent = pendingOrders;
+        
+        // Display recent orders
+        const recentOrders = orders.slice(0, 5);
+        const tbody = document.getElementById('recent-orders');
+        
+        if (recentOrders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No orders yet</td></tr>';
+        } else {
+          tbody.innerHTML = recentOrders.map(order => `
+            <tr>
+              <td>${order.id}</td>
+              <td>${order.customerName}<br><small>${order.customerEmail}</small></td>
+              <td>${order.productName}</td>
+              <td>₹${order.amount}</td>
+              <td><span class="status-badge status-${order.status}">${order.status}</span></td>
+              <td>${new Date(order.createdAt).toLocaleDateString('en-IN')}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    }
+    
+    loadDashboard();
+  </script>
+</body>
+</html>

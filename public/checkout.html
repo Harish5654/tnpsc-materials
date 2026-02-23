@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - TNPSC Materials</title>
+  <meta name="description" content="Complete your purchase - TNPSC handwritten PDF notes">
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="top-bar">
+      <a href="/" class="logo">
+        <img src="/logo.png" alt="TNPSC Materials Logo" style="width: 40px; height: 40px; object-fit: contain;">
+        <span>TNPSC Materials</span>
+      </a>
+      
+      <nav class="nav-links">
+        <a href="/cart" class="nav-link cart-icon">
+          <span>🛒 Cart</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Checkout Section -->
+  <div class="checkout-container">
+    <h2 class="section-title">💳 Checkout</h2>
+    
+    <form class="checkout-form" id="checkout-form">
+      <!-- Customer Information -->
+      <div class="form-section">
+        <h3>👤 Customer Information</h3>
+        
+        <div class="form-group">
+          <label for="customerName">Full Name *</label>
+          <input type="text" id="customerName" name="customerName" required placeholder="Enter your full name">
+        </div>
+        
+        <div class="form-group">
+          <label for="customerEmail">Email Address *</label>
+          <input type="email" id="customerEmail" name="customerEmail" required placeholder="Enter your email (PDF will be sent here)">
+        </div>
+        
+        <div class="form-group">
+          <label for="customerPhone">Phone Number *</label>
+          <input type="tel" id="customerPhone" name="customerPhone" required placeholder="Enter 10-digit mobile number" maxlength="10">
+        </div>
+      </div>
+      
+      <!-- Order Summary -->
+      <div class="form-section">
+        <h3>📋 Order Summary</h3>
+        
+        <div class="order-summary" id="order-items">
+          <!-- Order items will be loaded here -->
+        </div>
+        
+        <div class="order-summary">
+          <div class="order-item">
+            <span>Subtotal</span>
+            <span id="order-subtotal">₹0</span>
+          </div>
+          <div class="order-item">
+            <span>Tax</span>
+            <span>₹0</span>
+          </div>
+          <div class="order-item order-total">
+            <span>Total</span>
+            <span id="order-total">₹0</span>
+          </div>
+        </div>
+        
+        <input type="hidden" id="total-amount" name="totalAmount" value="0">
+      </div>
+      
+      <!-- Payment Section -->
+      <div class="form-section">
+        <h3>💳 Payment</h3>
+        
+        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="margin-bottom: 15px;"><strong>💰 Payment Methods:</strong></p>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; font-size: 2rem;">
+            <span>💳</span>
+            <span>📱</span>
+            <span>🏦</span>
+            <span>🌐</span>
+          </div>
+          <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+            Secure payment powered by Razorpay. Accepts UPI, Cards, Net Banking & Wallets
+          </p>
+        </div>
+        
+        <div class="trust-item" style="margin-bottom: 20px;">
+          <div class="trust-icon" style="width: 40px; height: 40px;">🔒</div>
+          <div class="trust-text">
+            <h4>Secure Payment</h4>
+            <p>Your payment information is encrypted and secure</p>
+          </div>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary" id="checkout-btn">
+        Proceed to Payment
+      </button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="/cart" style="color: #4a90d9;">← Back to Cart</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-section">
+        <h4>TNPSC Materials</h4>
+        <p style="color: #999; margin-top: 10px;">Your trusted source for TNPSC exam preparation.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 TNPSC Materials. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/checkout.js"></script>
+</body>
+</html>
