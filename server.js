@@ -8,6 +8,7 @@ const nodemailer = require('nodemailer');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -191,6 +192,74 @@ app.get('/download/:orderId', (req, res) => {
   res.status(404).send('PDF not found. Please contact support.');
 });
 
+// Download ALL PDFs as ZIP - NEW ENDPOINT
+app.get('/download-all/:orderId', (req, res) => {
+  const orders = readJSONFile(ORDERS_FILE);
+  const order = orders.find(o => o.id === req.params.orderId);
+  
+  if (!order) return res.status(404).send('Order not found. Please contact support.');
+  if (order.status !== 'completed') return res.status(400).send('Payment not completed. Please make payment to get PDFs.');
+  
+  const products = readJSONFile(PRODUCTS_FILE);
+  const product = products.find(p => p.id === order.productId);
+  if (!product) return res.status(404).send('Product not found');
+  
+  const pdfFolder = path.join(PDF_STORAGE, product.pdfFile);
+  
+  if (!product.pdfFolder || !fs.existsSync(pdfFolder)) {
+    return res.status(404).send('PDF folder not found. Please contact support.');
+  }
+  
+  const files = fs.readdirSync(pdfFolder).filter(f => f.toLowerCase().endsWith('.pdf'));
+  
+  if (files.length === 0) {
+    return res.status(404).send('No PDFs found. Please contact support.');
+  }
+  
+  // Create ZIP file
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const zipFilename = `${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_All_Notes.zip`;
+  
+  res.attachment(zipFilename);
+  archive.pipe(res);
+  
+  // Add all PDFs to ZIP
+  files.forEach(file => {
+    const filePath = path.join(pdfFolder, file);
+    archive.file(filePath, { name: file });
+  });
+  
+  archive.finalize();
+});
+
+// Get list of PDFs for an order (for preview)
+app.get('/api/order-pdfs/:orderId', (req, res) => {
+  const orders = readJSONFile(ORDERS_FILE);
+  const order = orders.find(o => o.id === req.params.orderId);
+  
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.status !== 'completed') return res.status(400).json({ error: 'Payment not completed' });
+  
+  const products = readJSONFile(PRODUCTS_FILE);
+  const product = products.find(p => p.id === order.productId);
+  if (!product) return res.status(404).json({ error: 'Product not found' });
+  
+  const pdfFolder = path.join(PDF_STORAGE, product.pdfFile);
+  
+  if (!product.pdfFolder || !fs.existsSync(pdfFolder)) {
+    return res.json({ productName: product.name, files: [] });
+  }
+  
+  const files = fs.readdirSync(pdfFolder)
+    .filter(f => f.toLowerCase().endsWith('.pdf'))
+    .map(f => ({
+      name: f,
+      size: fs.statSync(path.join(pdfFolder, f)).size
+    }));
+  
+  res.json({ productName: product.name, files, totalFiles: files.length });
+});
+
 // Get all orders (Admin)
 app.get('/api/orders', (req, res) => {
   const orders = readJSONFile(ORDERS_FILE);
@@ -354,6 +423,87 @@ app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'public'
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
 app.get('/admin/products', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'products.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'orders.html')));
+
+// Get order PDFs list endpoint
+app.get('/api/order-pdfs/:orderId', (req, res) => {
+  const orderId = req.params.orderId;
+  const orders = readJSONFile(ORDERS_FILE);
+  const order = orders.find(o => o.id === orderId);
+  
+  if (!order || order.status !== 'paid') {
+    return res.json({ files: [] });
+  }
+  
+  const products = readJSONFile(PRODUCTS_FILE);
+  const product = products.find(p => p.id === order.productId);
+  
+  if (!product) {
+    return res.json({ files: [] });
+  }
+  
+  const pdfFolderPath = path.join(PDF_STORAGE, product.pdfFile);
+  const files = [];
+  
+  try {
+    if (fs.existsSync(pdfFolderPath)) {
+      const dirFiles = fs.readdirSync(pdfFolderPath);
+      dirFiles.forEach(file => {
+        if (file.toLowerCase().endsWith('.pdf')) {
+          const filePath = path.join(pdfFolderPath, file);
+          const stats = fs.statSync(filePath);
+          files.push({
+            name: file,
+            size: stats.size
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error reading PDF folder:', error);
+  }
+  
+  res.json({ files });
+});
+
+// Download all PDFs as ZIP
+app.get('/download-all/:orderId', (req, res) => {
+  const orderId = req.params.orderId;
+  const orders = readJSONFile(ORDERS_FILE);
+  const order = orders.find(o => o.id === orderId);
+  
+  if (!order || order.status !== 'paid') {
+    return res.status(403).send('Order not found or not paid');
+  }
+  
+  const products = readJSONFile(PRODUCTS_FILE);
+  const product = products.find(p => p.id === order.productId);
+  
+  if (!product) {
+    return res.status(404).send('Product not found');
+  }
+  
+  const pdfFolderPath = path.join(PDF_STORAGE, product.pdfFile);
+  
+  if (!fs.existsSync(pdfFolderPath)) {
+    return res.status(404).send('PDF folder not found');
+  }
+  
+  const archiver = require('archiver');
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  
+  res.attachment(`${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_Notes.zip`);
+  
+  archive.pipe(res);
+  
+  const dirFiles = fs.readdirSync(pdfFolderPath);
+  dirFiles.forEach(file => {
+    if (file.toLowerCase().endsWith('.pdf')) {
+      archive.file(path.join(pdfFolderPath, file), { name: file });
+    }
+  });
+  
+  archive.finalize();
+});
 
 // Start server
 app.listen(PORT, () => {

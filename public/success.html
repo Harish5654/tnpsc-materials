@@ -93,6 +93,8 @@
     
     function showSuccessPage(data) {
       var container = document.getElementById('page-content');
+      var orderId = data.order.id;
+      
       container.innerHTML = 
         '<div class="success-icon">✅</div>' +
         '<h1>Payment Successful!</h1>' +
@@ -103,7 +105,8 @@
         '<div class="order-row"><span class="order-label">Product:</span><span class="order-value" id="product-name"></span></div>' +
         '<div class="order-row"><span class="order-label">Amount Paid:</span><span class="order-value" id="amount-paid"></span></div>' +
         '</div>' +
-        '<a href="/download/' + orderId + '" class="download-btn" id="download-link">📥 Download PDF Now</a>' +
+        '<div id="pdf-list-container"><p>Loading your PDFs...</p></div>' +
+        '<a href="/download-all/' + orderId + '" class="download-btn" id="download-all-btn" style="display:none;">📦 Download All as ZIP</a>' +
         '<br><br>' +
         '<a href="/products" class="home-btn">← Browse More Products</a>' +
         '<div class="whatsapp-support">' +
@@ -114,6 +117,40 @@
       document.getElementById('order-id').textContent = data.order.id;
       document.getElementById('product-name').textContent = data.product.name;
       document.getElementById('amount-paid').textContent = '₹' + data.order.amount;
+      
+      loadPdfList(orderId);
+    }
+    
+    function loadPdfList(orderId) {
+      fetch(API_URL + '/order-pdfs/' + orderId)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var container = document.getElementById('pdf-list-container');
+          var downloadBtn = document.getElementById('download-all-btn');
+          
+          if (data.files && data.files.length > 0) {
+            var html = '<div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:15px;text-align:left;">' +
+              '<h4 style="margin-bottom:10px;">📄 Included PDFs (' + data.files.length + ' files):</h4>' +
+              '<ul style="margin:0;padding-left:20px;color:#555;font-size:0.9rem;max-height:200px;overflow-y:auto;">';
+            
+            data.files.forEach(function(file) {
+              var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+              html += '<li style="margin-bottom:5px;">' + file.name + ' <span style="color:#888;">(' + sizeMB + ' MB)</span></li>';
+            });
+            
+            html += '</ul></div>';
+            container.innerHTML = html;
+            downloadBtn.style.display = 'inline-block';
+          } else {
+            container.innerHTML = '<p style="color:#666;">Click below to download your PDFs.</p>';
+            downloadBtn.style.display = 'inline-block';
+          }
+        })
+        .catch(function(err) {
+          console.error('Error loading PDF list:', err);
+          document.getElementById('pdf-list-container').innerHTML = '<p style="color:#666;">Click below to download your PDFs.</p>';
+          document.getElementById('download-all-btn').style.display = 'inline-block';
+        });
     }
     
     function showErrorPage() {
