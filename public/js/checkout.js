@@ -2,6 +2,21 @@
 
 const API_URL = '/api';
 
+let razorpayKeyId = 'YOUR_RAZORPAY_KEY_ID';
+
+// Fetch Razorpay key from server on load
+async function loadRazorpayKey() {
+  try {
+    const response = await fetch(`${API_URL}/config/razorpay-key`);
+    const data = await response.json();
+    razorpayKeyId = data.keyId;
+  } catch (error) {
+    console.error('Error loading Razorpay key:', error);
+  }
+}
+
+loadRazorpayKey();
+
 // Load cart items for checkout
 function loadCheckoutItems() {
   const container = document.getElementById('order-items');
@@ -22,7 +37,7 @@ function loadCheckoutItems() {
   `).join('');
   
   const total = cart.reduce((sum, item) => sum + item.price, 0);
-  document.getElementById('order-total').textContent = `₹${total}`;
+  document.getElementById('total').textContent = `₹${total}`;
   document.getElementById('total-amount').value = total;
 }
 
@@ -67,7 +82,8 @@ async function processCheckout(event) {
   btn.textContent = 'Processing...';
   
   try {
-    // Create order on server
+    // Create order on server - using first item for Razorpay order (single order constraint)
+    // The verification will handle all items
     const orderResponse = await fetch(`${API_URL}/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -86,9 +102,7 @@ async function processCheckout(event) {
       throw new Error(orderData.error);
     }
     
-    // Initialize Razorpay
-    const razorpayKeyId = 'YOUR_RAZORPAY_KEY_ID'; // Replace with actual key
-    
+    // Initialize Razorpay with key from server
     const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
@@ -97,7 +111,7 @@ async function processCheckout(event) {
       description: `Purchase: ${productNames}`,
       order_id: orderData.id,
       handler: async function(response) {
-        // Payment successful - verify and send email
+        // Payment successful - verify and process all items in cart
         await verifyPayment(response, cart, customerEmail, customerName);
       },
       prefill: {
@@ -122,14 +136,13 @@ async function processCheckout(event) {
   }
 }
 
-// Verify payment and send email
+// Verify payment and process all cart items
 async function verifyPayment(paymentResponse, cart, customerEmail, customerName) {
   try {
-    // For demo purposes, simulate successful payment
-    // In production, verify the razorpay_signature on server side
-    
+    // Verify and create orders for ALL items in cart
     const productIds = cart.map(item => item.id);
     let allSuccessful = true;
+    let createdOrders = [];
     
     for (const productId of productIds) {
       const response = await fetch(`${API_URL}/verify-payment`, {
@@ -146,24 +159,29 @@ async function verifyPayment(paymentResponse, cart, customerEmail, customerName)
       });
       
       const result = await response.json();
-      if (!result.success && !result.order) {
+      if (result.success && result.order) {
+        createdOrders.push(result.order);
+      } else {
         console.error('Payment verification failed for product:', productId);
         allSuccessful = false;
       }
     }
     
-    if (allSuccessful) {
-      // Clear cart
+    if (allSuccessful && createdOrders.length > 0) {
+      // Clear cart after successful payment
       localStorage.removeItem('tnpsc_cart');
       
+      // Get first order ID for redirect
+      const firstOrderId = createdOrders[0].id;
+      
       // Redirect to success page
-      window.location.href = `/success?name=${encodeURIComponent(customerName)}&email=${encodeURIComponent(customerEmail)}`;
+      window.location.href = `/success?name=${encodeURIComponent(customerName)}&email=${encodeURIComponent(customerEmail)}&orderId=${firstOrderId}`;
     } else {
       alert('Payment verification failed. Please contact support.');
     }
   } catch (error) {
     console.error('Payment verification error:', error);
-    alert('Payment was successful but email delivery failed. Please contact support.');
+    alert('Payment was successful but verification failed. Please contact support with your payment ID.');
   }
 }
 

@@ -56,6 +56,11 @@ function writeJSONFile(filePath, data) {
 
 // API Routes
 
+// Get Razorpay key ID for frontend
+app.get('/api/config/razorpay-key', (req, res) => {
+  res.json({ keyId: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID' });
+});
+
 // Get all products
 app.get('/api/products', (req, res) => {
   const products = readJSONFile(PRODUCTS_FILE);
@@ -192,7 +197,7 @@ app.get('/download/:orderId', (req, res) => {
   res.status(404).send('PDF not found. Please contact support.');
 });
 
-// Download ALL PDFs as ZIP - NEW ENDPOINT
+// Download ALL PDFs as ZIP - SECURE: Only delivers after verified payment
 app.get('/download-all/:orderId', (req, res) => {
   const orders = readJSONFile(ORDERS_FILE);
   const order = orders.find(o => o.id === req.params.orderId);
@@ -232,7 +237,7 @@ app.get('/download-all/:orderId', (req, res) => {
   archive.finalize();
 });
 
-// Get list of PDFs for an order (for preview)
+// Get list of PDFs for an order (for preview) - SECURE: Only works after verified payment
 app.get('/api/order-pdfs/:orderId', (req, res) => {
   const orders = readJSONFile(ORDERS_FILE);
   const order = orders.find(o => o.id === req.params.orderId);
@@ -423,87 +428,6 @@ app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'public'
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
 app.get('/admin/products', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'products.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'orders.html')));
-
-// Get order PDFs list endpoint
-app.get('/api/order-pdfs/:orderId', (req, res) => {
-  const orderId = req.params.orderId;
-  const orders = readJSONFile(ORDERS_FILE);
-  const order = orders.find(o => o.id === orderId);
-  
-  if (!order || order.status !== 'paid') {
-    return res.json({ files: [] });
-  }
-  
-  const products = readJSONFile(PRODUCTS_FILE);
-  const product = products.find(p => p.id === order.productId);
-  
-  if (!product) {
-    return res.json({ files: [] });
-  }
-  
-  const pdfFolderPath = path.join(PDF_STORAGE, product.pdfFile);
-  const files = [];
-  
-  try {
-    if (fs.existsSync(pdfFolderPath)) {
-      const dirFiles = fs.readdirSync(pdfFolderPath);
-      dirFiles.forEach(file => {
-        if (file.toLowerCase().endsWith('.pdf')) {
-          const filePath = path.join(pdfFolderPath, file);
-          const stats = fs.statSync(filePath);
-          files.push({
-            name: file,
-            size: stats.size
-          });
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Error reading PDF folder:', error);
-  }
-  
-  res.json({ files });
-});
-
-// Download all PDFs as ZIP
-app.get('/download-all/:orderId', (req, res) => {
-  const orderId = req.params.orderId;
-  const orders = readJSONFile(ORDERS_FILE);
-  const order = orders.find(o => o.id === orderId);
-  
-  if (!order || order.status !== 'paid') {
-    return res.status(403).send('Order not found or not paid');
-  }
-  
-  const products = readJSONFile(PRODUCTS_FILE);
-  const product = products.find(p => p.id === order.productId);
-  
-  if (!product) {
-    return res.status(404).send('Product not found');
-  }
-  
-  const pdfFolderPath = path.join(PDF_STORAGE, product.pdfFile);
-  
-  if (!fs.existsSync(pdfFolderPath)) {
-    return res.status(404).send('PDF folder not found');
-  }
-  
-  const archiver = require('archiver');
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  
-  res.attachment(`${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_Notes.zip`);
-  
-  archive.pipe(res);
-  
-  const dirFiles = fs.readdirSync(pdfFolderPath);
-  dirFiles.forEach(file => {
-    if (file.toLowerCase().endsWith('.pdf')) {
-      archive.file(path.join(pdfFolderPath, file), { name: file });
-    }
-  });
-  
-  archive.finalize();
-});
 
 // Start server
 app.listen(PORT, () => {

@@ -52,7 +52,7 @@
     <main class="admin-main">
       <div class="admin-header">
         <h1>📊 Dashboard</h1>
-        <button class="logout-btn" onclick="window.location.href='/'">Logout</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
       </div>
       
       <!-- Stats -->
@@ -151,6 +151,12 @@
     }
     
     loadDashboard();
+    
+    // Logout function
+    function logout() {
+      sessionStorage.removeItem('adminToken');
+      window.location.href = '/';
+    }
   </script>
 </body>
 </html>
