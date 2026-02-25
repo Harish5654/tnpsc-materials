@@ -1,5 +1,4 @@
-{
-  "name": "tnpsc-materials",
+{ "name": "tnpsc-materials",
   "version": "1.0.0",
   "description": "E-commerce website for TNPSC PDF Notes",
   "main": "server.js",

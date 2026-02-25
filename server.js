@@ -40,7 +40,7 @@ const transporter = nodemailer.createTransport({
 // Data file paths
 const PRODUCTS_FILE = path.join(__dirname, 'data', 'products.json');
 const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
-const PDF_STORAGE = path.join(__dirname, 'pdf-storage');
+const PDF_STORAGE = path.join(__dirname, 'public');
 
 // Helper functions
 function readJSONFile(filePath) {

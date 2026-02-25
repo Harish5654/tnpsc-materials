@@ -8,7 +8,7 @@ A modern, professional e-commerce website for selling handwritten PDF notes for 
 tnpsc-materials/
 ├── server.js           # Express.js backend
 ├── package.json        # Node.js dependencies
-├── config.env.example  # Configuration template
+├── config.enuv.example  # Configuration template
 ├── data/
 │   ├── products.json   # Products with payment links
 │   └── orders.json    # Orders storage
