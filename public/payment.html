@@ -3,19 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Redirecting to Payment - TNPSC Materials</title>
-  
+  <title>Complete Payment - TNPSC Materials</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .payment-redirect {
-      max-width: 600px;
-      margin: 100px auto;
-      text-align: center;
-      padding: 40px;
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px; 
+    }
+    .payment-container { 
+      background: white; 
+      border-radius: 20px; 
+      padding: 40px; 
+      max-width: 500px; 
+      width: 100%; 
+      text-align: center; 
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
     }
     .loading-spinner {
       width: 60px;
@@ -26,76 +35,161 @@
       animation: spin 1s linear infinite;
       margin: 30px auto;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .product-info {
-      background: #f9f9f9;
-      padding: 20px;
-      border-radius: 10px;
-      margin: 20px 0;
-    }
-    .product-info h2 {
-      margin: 0 0 10px 0;
-      color: #333;
-    }
-    .product-info .price {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #667eea;
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    h1 { color: #333; font-size: 1.8rem; margin-bottom: 10px; }
+    .product-info { background: #f9f9f9; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
+    .product-info h2 { margin: 0 0 10px 0; color: #333; font-size: 1.2rem; }
+    .product-info .price { font-size: 2rem; font-weight: bold; color: #667eea; }
+    .product-info .original-price { text-decoration: line-through; color: #999; font-size: 1rem; margin-left: 10px; }
+    .features { text-align: left; margin: 15px 0; }
+    .features li { color: #666; margin: 8px 0; list-style: none; }
+    .features li::before { content: "✓"; color: #4caf50; margin-right: 10px; }
     .btn-pay {
-      background: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 15px 40px;
+      padding: 18px 50px;
       border: none;
-      border-radius: 8px;
+      border-radius: 30px;
       font-size: 1.2rem;
+      font-weight: bold;
       cursor: pointer;
-      margin-top: 20px;
-      transition: all 0.3s ease;
+      width: 100%;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
-    .btn-pay:hover {
-      background: #5568d3;
-      transform: translateY(-2px);
-    }
+    .btn-pay:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); }
+    .btn-pay:disabled { background: #ccc; cursor: not-allowed; }
+    .secure-note { margin-top: 20px; color: #666; font-size: 0.9rem; }
+    .secure-note span { color: #4caf50; }
+    .error-msg { color: #ff4757; background: #ffe0e0; padding: 15px; border-radius: 10px; margin: 20px 0; }
+    .back-link { display: inline-block; margin-top: 20px; color: #667eea; text-decoration: none; }
   </style>
 </head>
 <body>
-  <!-- Header -->
-  <header>
-    <div class="top-bar">
-      <a href="/" class="logo">
-        <img src="/logo.png" alt="TNPSC Materials Logo" style="width: 40px; height: 40px; object-fit: contain;">
-        <span>TNPSC Materials</span>
-      </a>
-    </div>
-  </header>
-
-  <!-- Payment Redirect Section -->
-  <div class="payment-redirect" id="payment-product">
+  <div class="payment-container" id="payment-container">
     <div class="loading-spinner"></div>
-    <h1>Redirecting to Payment...</h1>
-    <p>Please wait while we redirect you to the secure payment page.</p>
-    
-    <div class="product-info" id="product-details">
-      <!-- Product details will be loaded here -->
-    </div>
-    
-    <button class="btn-pay" id="pay-button" onclick="redirectToPayment()">
-      Click here if not redirected
-    </button>
-    
-    <p style="margin-top: 20px; color: #666; font-size: 0.9rem;">
-      🔒 Secure payment powered by Razorpay
-    </p>
+    <h1>Loading Payment...</h1>
+    <p>Please wait while we prepare your payment.</p>
   </div>
 
   <script>
-    let paymentLink = '';
+    const API_URL = '/api';
+    
+    // Get product ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
+    
+    if (!productId) {
+      document.getElementById('payment-container').innerHTML = 
+        '<h1>Product Not Found</h1>' +
+        '<p>Please select a product to purchase.</p>' +
+        '<a href="/products" class="back-link">Browse Products</a>';
+    } else {
+      // Fetch product details and initiate payment
+      loadProductAndPay();
+    }
+    
+    async function loadProductAndPay() {
+      try {
+        // Get product details
+        const response = await fetch(API_URL + '/product/' + productId);
+        const product = await response.json();
+        
+        if (!product || !product.paymentLink) {
+          document.getElementById('payment-container').innerHTML = 
+            '<h1>Product Not Available</h1>' +
+            '<p>This product is not available for purchase.</p>' +
+            '<a href="/products" class="back-link">Browse Products</a>';
+          return;
+        }
+        
+        // Store product info in sessionStorage for verification later
+        sessionStorage.setItem('pending_product_' + productId, JSON.stringify({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          pdfFile: product.pdfFile,
+          pdfFolder: product.pdfFolder
+        }));
+        
+        // Show product info and redirect to Razorpay
+        document.getElementById('payment-container').innerHTML = 
+          '<h1>📚 ' + product.name + '</h1>' +
+          '<div class="product-info">' +
+            '<h2>' + product.name + '</h2>' +
+            '<div class="price">₹' + product.price + '<span class="original-price">₹' + (product.originalPrice || product.price * 2) + '</span></div>' +
+            '<ul class="features">' +
+              '<li>Instant PDF Download</li>' +
+              '<li>Handwritten Notes</li>' +
+              '<li>Valid for All TNPSC Exams</li>' +
+            '</ul>' +
+          '</div>' +
+          '<button class="btn-pay" id="pay-btn" onclick="initiatePayment()">💳 Pay ₹' + product.price + ' Now</button>' +
+          '<p class="secure-note"><span>🔒</span> Secure payment powered by Razorpay</p>';
+        
+      } catch (error) {
+        console.error('Error loading product:', error);
+        document.getElementById('payment-container').innerHTML = 
+          '<h1>Error</h1>' +
+          '<p>Failed to load product. Please try again.</p>' +
+          '<a href="/products" class="back-link">Browse Products</a>';
+      }
+    }
+    
+    async function initiatePayment() {
+      const btn = document.getElementById('pay-btn');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      
+      try {
+        // Get product details
+        const response = await fetch(API_URL + '/product/' + productId);
+        const product = await response.json();
+        
+        if (!product || !product.paymentLink) {
+          alert('Product not available');
+          btn.disabled = false;
+          btn.textContent = 'Pay ₹' + product.price + ' Now';
+          return;
+        }
+        
+        // Redirect to Razorpay payment link
+        // The payment link should have a callback_url for success
+        const baseUrl = window.location.origin;
+        const successUrl = baseUrl + '/success?product_id=' + productId + '&status=success';
+        const failureUrl = baseUrl + '/failed?product_id=' + productId + '&status=failed';
+        
+        // If using Razorpay payment link with callback, redirect directly
+        if (product.paymentLink) {
+          // Add callback parameters to the payment link
+          let paymentUrl = product.paymentLink;
+          
+          // If the payment link doesn't have callback params, we'd need to use the API
+          // For now, just redirect to the payment link
+          window.location.href = paymentUrl;
+        }
+        
+      } catch (error) {
+        console.error('Payment error:', error);
+        alert('Failed to initiate payment. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Pay Now';
+      }
+    }
+    
+    // Check for payment status in URL
+    window.addEventListener('load', function() {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get('status');
+      const orderId = params.get('order');
+      
+      if (status === 'success' && orderId) {
+        // Payment successful - redirect to success page
+        window.location.href = '/success?order=' + orderId;
+      } else if (status === 'failed') {
+        // Payment failed - redirect to failed page
+        window.location.href = '/failed?product_id=' + productId;
+      }
+    });
   </script>
-  
-  <script src="/js/main.js"></script>
 </body>
 </html>

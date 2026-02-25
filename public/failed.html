@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Failed - TNPSC Materials</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❌</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      line-height: 1.6; 
+      color: #333; 
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); 
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px; 
+    }
+    .failed-container { 
+      background: white; 
+      border-radius: 20px; 
+      padding: 40px; 
+      max-width: 500px; 
+      width: 100%; 
+      text-align: center; 
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+    }
+    .failed-icon { font-size: 5rem; margin-bottom: 20px; }
+    h1 { color: #ff4757; font-size: 2rem; margin-bottom: 15px; }
+    .subtitle { color: #666; font-size: 1.1rem; margin-bottom: 30px; }
+    .reason-box { 
+      background: #fff5f5; 
+      border: 2px solid #ffcdd2; 
+      border-radius: 15px; 
+      padding: 25px; 
+      margin-bottom: 30px; 
+      text-align: left;
+    }
+    .reason-box h3 { color: #c62828; margin-bottom: 10px; }
+    .reason-box p { color: #666; font-size: 0.95rem; }
+    .retry-btn { 
+      display: inline-block; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      padding: 16px 40px; 
+      border-radius: 30px; 
+      text-decoration: none; 
+      font-size: 1.1rem; 
+      font-weight: bold; 
+      border: none;
+      cursor: pointer;
+    }
+    .home-btn { 
+      display: inline-block; 
+      background: transparent; 
+      border: 2px solid #667eea; 
+      color: #667eea; 
+      padding: 12px 30px; 
+      border-radius: 25px; 
+      text-decoration: none; 
+      font-weight: bold; 
+    }
+    .whatsapp-support { margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 15px; }
+    .whatsapp-btn { display: inline-block; background: #25d366; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="failed-container">
+    <div class="failed-icon">❌</div>
+    <h1>Payment Failed</h1>
+    <p class="subtitle">Your payment was not completed. Please make a payment to access the notes.</p>
+    <div class="reason-box">
+      <h3>⚠️ What happened?</h3>
+      <p>Your payment was declined or cancelled. This could be due to:</p>
+      <ul style="margin: 10px 0 0 20px; color: #666;">
+        <li>Insufficient funds in your account</li>
+        <li>Incorrect card details entered</li>
+        <li>Bank transaction limit reached</li>
+        <li>Payment was cancelled by you</li>
+        <li>Network or technical issue</li>
+      </ul>
+    </div>
+    <button class="retry-btn" onclick="goToProducts()">🔄 Try Again</button>
+    <br><br>
+    <a href="/" class="home-btn">← Back to Home</a>
+    <div class="whatsapp-support">
+      <p>Need help with payment? Contact us on WhatsApp:</p>
+      <a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank">💬 Chat on WhatsApp</a>
+    </div>
+  </div>
+  <script>
+    function goToProducts() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const productId = urlParams.get('product_id');
+      if (productId) {
+        window.location.href = '/payment?id=' + productId;
+      } else {
+        window.location.href = '/products';
+      }
+    }
+  </script>
+</body>
+</html>
