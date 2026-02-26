@@ -103,7 +103,7 @@ async function processCheckout(event) {
     }
     
     // Initialize Razorpay with key from server
-    const razorpayOptions = {
+const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
       currency: 'INR',
@@ -121,7 +121,10 @@ async function processCheckout(event) {
       },
       theme: {
         color: '#667eea'
-      }
+      },
+      // Enable redirect for UPI/GPay payments
+      redirect: true,
+      callback_url: `${window.location.origin}/success?productId=${cart[0].id}`
     };
     
     const razorpay = new Razorpay(razorpayOptions);

@@ -45,9 +45,13 @@
   <script>
     var API_URL = '/api';
     var params = new URLSearchParams(window.location.search);
-    var orderId = params.get('order');
-    var productId = params.get('product_id');
+var orderId = params.get('order') || params.get('orderId');
+    var productId = params.get('product_id') || params.get('productId');
     var status = params.get('status');
+    
+    // Handle Razorpay callback redirect parameters
+    var razorpayOrderId = params.get('razorpay_order_id');
+    var razorpayPaymentId = params.get('razorpay_payment_id');
     
     if (status === 'failed') {
       showFailedPage();
