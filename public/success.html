@@ -45,7 +45,9 @@
 <script>
     var API_URL = '/api';
     var params = new URLSearchParams(window.location.search);
-    var orderId = params.get('order') || params.get('orderId') || params.get('order_id');
+    
+    // Check for various parameter names that might be used
+    var orderId = params.get('order') || params.get('orderId') || params.get('order_id') || params.get('razorpay_order_id');
     var productId = params.get('product_id') || params.get('productId');
     var status = params.get('status');
     
@@ -60,14 +62,16 @@
       pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
     } catch(e) {}
     
+    console.log('Success page params:', { orderId, productId, razorpayOrderId, razorpayPaymentId, status });
+    
     if (status === 'failed') {
       showFailedPage();
+    } else if (orderId) {
+      // We have an order ID - verify it exists in our system
+      verifyOrder(orderId);
     } else if (razorpayOrderId && razorpayPaymentId && productId) {
       // Handle Razorpay redirect callback - verify payment and create order
       verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId);
-    } else if (orderId) {
-      // We have an order ID, verify it
-      verifyOrder(orderId);
     } else if (pendingOrder && pendingOrder.razorpayOrderId && pendingOrder.productId) {
       // No callback params but we have pending order in localStorage - verify it
       verifyPendingOrder(pendingOrder);
