@@ -112,7 +112,7 @@ async function processCheckout(event) {
     };
     localStorage.setItem('pending_order', JSON.stringify(orderInfo));
     
-    // Initialize Razorpay with key from server
+    // Initialize Razorpay with key from server - using redirect for success page handling
     const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
@@ -121,8 +121,13 @@ async function processCheckout(event) {
       description: `Purchase: ${productNames}`,
       order_id: orderData.id,
       handler: function(response) {
-        // Payment successful - verify and process all items in cart
-        verifyPayment(response, cart, customerEmail, customerName);
+        // Store payment response for success page to process
+        localStorage.setItem('payment_response', JSON.stringify(response));
+        localStorage.setItem('payment_cart', JSON.stringify(cart));
+        localStorage.setItem('payment_customer_email', customerEmail);
+        localStorage.setItem('payment_customer_name', customerName);
+        // Redirect to success page
+        window.location.href = '/success';
       },
       prefill: {
         name: customerName,
@@ -138,7 +143,9 @@ async function processCheckout(event) {
           btn.disabled = false;
           btn.textContent = 'Proceed to Payment';
         }
-      }
+      },
+      redirect: true,
+      callback_url: window.location.origin + '/success'
     };
     
     const razorpay = new Razorpay(razorpayOptions);

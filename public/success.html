@@ -46,37 +46,113 @@
     var API_URL = '/api';
     var params = new URLSearchParams(window.location.search);
     
-    // Check for various parameter names that might be used
     var orderId = params.get('order') || params.get('orderId') || params.get('order_id') || params.get('razorpay_order_id');
     var productId = params.get('product_id') || params.get('productId');
     var status = params.get('status');
     
-    // Handle Razorpay callback redirect parameters
     var razorpayOrderId = params.get('razorpay_order_id');
     var razorpayPaymentId = params.get('razorpay_payment_id');
     var razorpaySignature = params.get('razorpay_signature');
     
-    // Check if we have a pending order in localStorage
     var pendingOrder = null;
     try {
       pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
     } catch(e) {}
     
-    console.log('Success page params:', { orderId, productId, razorpayOrderId, razorpayPaymentId, status });
+    var paymentResponse = null;
+    var paymentCart = null;
+    var customerEmail = '';
+    var customerName = '';
+    try {
+      paymentResponse = JSON.parse(localStorage.getItem('payment_response'));
+      paymentCart = JSON.parse(localStorage.getItem('payment_cart'));
+      customerEmail = localStorage.getItem('payment_customer_email') || '';
+      customerName = localStorage.getItem('payment_customer_name') || '';
+    } catch(e) {}
+    
+    console.log('Success page params:', { orderId, productId, razorpayOrderId, razorpayPaymentId, status, hasPaymentResponse: !!paymentResponse });
     
     if (status === 'failed') {
       showFailedPage();
+    } else if (paymentResponse && paymentCart) {
+      verifyPaymentFromHandler(paymentResponse, paymentCart, customerEmail, customerName);
     } else if (orderId) {
-      // We have an order ID - verify it exists in our system
       verifyOrder(orderId);
     } else if (razorpayOrderId && razorpayPaymentId && productId) {
-      // Handle Razorpay redirect callback - verify payment and create order
       verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId);
     } else if (pendingOrder && pendingOrder.razorpayOrderId && pendingOrder.productId) {
-      // No callback params but we have pending order in localStorage - verify it
       verifyPendingOrder(pendingOrder);
     } else {
       showWelcomePage();
+    }
+    
+    function verifyPaymentFromHandler(paymentResponse, cart, customerEmail, customerName) {
+      var productIds = cart.map(function(item) { return item.id; });
+      var allSuccessful = true;
+      var createdOrders = [];
+      var currentIndex = 0;
+      
+      function processNextProduct() {
+        if (currentIndex >= productIds.length) {
+          if (allSuccessful && createdOrders.length > 0) {
+            localStorage.removeItem('tnpsc_cart');
+            localStorage.removeItem('payment_response');
+            localStorage.removeItem('payment_cart');
+            localStorage.removeItem('payment_customer_email');
+            localStorage.removeItem('payment_customer_name');
+            localStorage.removeItem('pending_order');
+            
+            var firstOrder = createdOrders[0];
+            var firstOrderId = firstOrder.id;
+            var productId = firstOrder.productId;
+            
+            var downloadPageMap = {
+              'prod_001': '/tamil-download',
+              'prod_002': '/gk-download',
+              'prod_003': '/combo-download'
+            };
+            
+            var downloadPage = downloadPageMap[productId] || '/products';
+            window.location.href = downloadPage + '?order=' + firstOrderId;
+          } else {
+            showErrorPage();
+          }
+          return;
+        }
+        
+        var productId = productIds[currentIndex];
+        fetch(API_URL + '/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpayOrderId: paymentResponse.razorpay_order_id,
+            razorpayPaymentId: paymentResponse.razorpay_payment_id,
+            razorpaySignature: paymentResponse.razorpay_signature || 'demo',
+            productId: productId,
+            customerEmail: customerEmail,
+            customerName: customerName
+          })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+          if (result.success && result.order) {
+            createdOrders.push(result.order);
+          } else {
+            console.error('Payment verification failed for product:', productId);
+            allSuccessful = false;
+          }
+          currentIndex++;
+          processNextProduct();
+        })
+        .catch(function(err) {
+          console.error('Error verifying payment:', err);
+          allSuccessful = false;
+          currentIndex++;
+          processNextProduct();
+        });
+      }
+      
+      processNextProduct();
     }
     
     function verifyPendingOrder(pendingOrder) {
@@ -109,18 +185,17 @@
     }
     
     function verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId) {
-      // Get customer info from localStorage
       var pendingOrder = null;
       try {
         pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
       } catch(e) {}
       
-      var customerEmail = '';
-      var customerName = '';
+      var custEmail = '';
+      var custName = '';
       
       if (pendingOrder) {
-        customerEmail = pendingOrder.customerEmail || '';
-        customerName = pendingOrder.customerName || '';
+        custEmail = pendingOrder.customerEmail || '';
+        custName = pendingOrder.customerName || '';
       }
       
       fetch(API_URL + '/verify-callback', {
@@ -131,8 +206,8 @@
           razorpayPaymentId: razorpayPaymentId,
           razorpaySignature: razorpaySignature,
           productId: productId,
-          customerEmail: customerEmail,
-          customerName: customerName
+          customerEmail: custEmail,
+          customerName: custName
         })
       })
       .then(function(res) { return res.json(); })
@@ -188,26 +263,23 @@
     function showSuccessPage(data) {
       var container = document.getElementById('page-content');
       var orderId = data.order.id;
-      var productId = data.order.productId || data.product.id;
+      var prodId = data.order.productId || data.product.id;
       
-      console.log('Redirecting with orderId:', orderId, 'productId:', productId);
+      console.log('Redirecting with orderId:', orderId, 'productId:', prodId);
       
-      // Redirect to appropriate download page based on product
       var downloadPageMap = {
         'prod_001': '/tamil-download',
         'prod_002': '/gk-download',
         'prod_003': '/combo-download'
       };
       
-      var downloadPage = downloadPageMap[productId] || '/products';
+      var downloadPage = downloadPageMap[prodId] || '/products';
       
-      // Store order info in localStorage for download pages
       localStorage.setItem('verified_order', JSON.stringify({
         orderId: orderId,
-        productId: productId
+        productId: prodId
       }));
       
-      // Redirect to product-specific download page
       window.location.href = downloadPage + '?order=' + orderId;
     }
     
