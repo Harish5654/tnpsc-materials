@@ -105,6 +105,20 @@
     }
     
     function verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId) {
+      // Get customer info from localStorage
+      var pendingOrder = null;
+      try {
+        pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
+      } catch(e) {}
+      
+      var customerEmail = '';
+      var customerName = '';
+      
+      if (pendingOrder) {
+        customerEmail = pendingOrder.customerEmail || '';
+        customerName = pendingOrder.customerName || '';
+      }
+      
       fetch(API_URL + '/verify-callback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +126,9 @@
           razorpayOrderId: razorpayOrderId,
           razorpayPaymentId: razorpayPaymentId,
           razorpaySignature: razorpaySignature,
-          productId: productId
+          productId: productId,
+          customerEmail: customerEmail,
+          customerName: customerName
         })
       })
       .then(function(res) { return res.json(); })
@@ -165,10 +181,12 @@
         });
     }
     
-function showSuccessPage(data) {
+    function showSuccessPage(data) {
       var container = document.getElementById('page-content');
       var orderId = data.order.id;
       var productId = data.order.productId || data.product.id;
+      
+      console.log('Redirecting with orderId:', orderId, 'productId:', productId);
       
       // Redirect to appropriate download page based on product
       var downloadPageMap = {
@@ -178,6 +196,12 @@ function showSuccessPage(data) {
       };
       
       var downloadPage = downloadPageMap[productId] || '/products';
+      
+      // Store order info in localStorage for download pages
+      localStorage.setItem('verified_order', JSON.stringify({
+        orderId: orderId,
+        productId: productId
+      }));
       
       // Redirect to product-specific download page
       window.location.href = downloadPage + '?order=' + orderId;
