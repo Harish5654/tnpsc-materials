@@ -180,15 +180,26 @@ async function verifyPayment(paymentResponse, cart, customerEmail, customerName)
       }
     }
     
-    if (allSuccessful && createdOrders.length > 0) {
+if (allSuccessful && createdOrders.length > 0) {
       // Clear cart after successful payment
       localStorage.removeItem('tnpsc_cart');
       
-      // Get first order ID for redirect
-      const firstOrderId = createdOrders[0].id;
+      // Get first order ID and product ID for redirect
+      const firstOrder = createdOrders[0];
+      const firstOrderId = firstOrder.id;
+      const productId = firstOrder.productId;
       
-      // Redirect to success page
-      window.location.href = `/success?name=${encodeURIComponent(customerName)}&email=${encodeURIComponent(customerEmail)}&orderId=${firstOrderId}`;
+      // Map product to download page
+      const downloadPageMap = {
+        'prod_001': '/tamil-download',
+        'prod_002': '/gk-download',
+        'prod_003': '/combo-download'
+      };
+      
+      const downloadPage = downloadPageMap[productId] || '/success';
+      
+      // Redirect to product-specific download page
+      window.location.href = `${downloadPage}?order=${firstOrderId}`;
     } else {
       alert('Payment verification failed. Please contact support.');
     }

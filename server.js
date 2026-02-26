@@ -40,7 +40,7 @@ const transporter = nodemailer.createTransport({
 // Data file paths
 const PRODUCTS_FILE = path.join(__dirname, 'data', 'products.json');
 const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
-const PDF_STORAGE = path.join(__dirname, 'public');
+const PDF_STORAGE = path.join(__dirname, 'pdf-storage');
 
 // Helper functions
 function readJSONFile(filePath) {
@@ -468,6 +468,9 @@ app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 app.get('/success', (req, res) => res.sendFile(path.join(__dirname, 'public', 'success.html')));
 app.get('/failed', (req, res) => res.sendFile(path.join(__dirname, 'public', 'failed.html')));
 app.get('/payment', (req, res) => res.sendFile(path.join(__dirname, 'public', 'payment.html')));
+app.get('/tamil-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tamil-download.html')));
+app.get('/gk-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gk-download.html')));
+app.get('/combo-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'combo-download.html')));
 app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
 app.get('/admin/products', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'products.html')));

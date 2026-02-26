@@ -165,34 +165,22 @@
         });
     }
     
-    function showSuccessPage(data) {
+function showSuccessPage(data) {
       var container = document.getElementById('page-content');
       var orderId = data.order.id;
+      var productId = data.order.productId || data.product.id;
       
-      container.innerHTML = 
-        '<div class="success-icon">✅</div>' +
-        '<h1>Payment Successful!</h1>' +
-        '<p class="subtitle">Your PDF notes are ready for download.</p>' +
-        '<div class="order-details">' +
-        '<h3>📋 Order Details</h3>' +
-        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value" id="order-id"></span></div>' +
-        '<div class="order-row"><span class="order-label">Product:</span><span class="order-value" id="product-name"></span></div>' +
-        '<div class="order-row"><span class="order-label">Amount Paid:</span><span class="order-value" id="amount-paid"></span></div>' +
-        '</div>' +
-        '<div id="pdf-list-container"><p>Loading your PDFs...</p></div>' +
-        '<a href="/download-all/' + orderId + '" class="download-btn" id="download-all-btn" style="display:none;">📦 Download All as ZIP</a>' +
-        '<br><br>' +
-        '<a href="/products" class="home-btn">← Browse More Products</a>' +
-        '<div class="whatsapp-support">' +
-        '<p>Need help? Contact us on WhatsApp:</p>' +
-        '<a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank">💬 Chat on WhatsApp</a>' +
-        '</div>';
+      // Redirect to appropriate download page based on product
+      var downloadPageMap = {
+        'prod_001': '/tamil-download',
+        'prod_002': '/gk-download',
+        'prod_003': '/combo-download'
+      };
       
-      document.getElementById('order-id').textContent = data.order.id;
-      document.getElementById('product-name').textContent = data.product.name;
-      document.getElementById('amount-paid').textContent = '₹' + data.order.amount;
+      var downloadPage = downloadPageMap[productId] || '/products';
       
-      loadPdfList(orderId);
+      // Redirect to product-specific download page
+      window.location.href = downloadPage + '?order=' + orderId;
     }
     
     function loadPdfList(orderId) {
