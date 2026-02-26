@@ -82,7 +82,7 @@ async function processCheckout(event) {
   btn.textContent = 'Processing...';
   
   try {
-    // Create order on server - using first item for Razorpay order (single order constraint)
+    // Create order on server
     const orderResponse = await fetch(`${API_URL}/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,7 +111,10 @@ async function processCheckout(event) {
     };
     localStorage.setItem('pending_order', JSON.stringify(orderInfo));
     
-    // Initialize Razorpay with key from server
+    // Get the base URL for callback
+    const baseUrl = window.location.origin;
+    
+    // Initialize Razorpay with redirect - this will redirect to our success page after payment
     const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
@@ -119,14 +122,17 @@ async function processCheckout(event) {
       name: 'TNPSC Materials',
       description: `Purchase: ${productNames}`,
       order_id: orderData.id,
+      // Use redirect to skip Razorpay's success page
+      redirect: true,
+      callback_url: baseUrl + '/success',
+      // Also handle via handler as backup
       handler: function(response) {
-        // Store payment response for success page to process
+        // Store payment response 
         localStorage.setItem('payment_response', JSON.stringify(response));
         localStorage.setItem('payment_cart', JSON.stringify(cart));
         localStorage.setItem('payment_customer_email', customerEmail);
         localStorage.setItem('payment_customer_name', customerName);
-        // Redirect to success page which will verify and redirect to download
-        window.location.href = '/success';
+        // The redirect will happen automatically due to redirect: true
       },
       prefill: {
         name: customerName,
@@ -137,6 +143,7 @@ async function processCheckout(event) {
         color: '#667eea'
       },
       modal: {
+        confirm_close: true,
         ondismiss: function() {
           console.log('Payment modal dismissed');
           btn.disabled = false;
