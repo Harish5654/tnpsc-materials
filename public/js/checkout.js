@@ -131,10 +131,8 @@ async function processCheckout(event) {
       },
       theme: {
         color: '#667eea'
-      },
-      // Enable redirect for UPI/GPay payments
-      redirect: true,
-      callback_url: `${window.location.origin}/success?order_id=${orderData.id}&productId=${cart[0].id}`
+      }
+      // Removed redirect: true and callback_url - handler function will handle the redirect
     };
     
     const razorpay = new Razorpay(razorpayOptions);
