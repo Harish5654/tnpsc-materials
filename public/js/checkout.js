@@ -83,7 +83,6 @@ async function processCheckout(event) {
   
   try {
     // Create order on server - using first item for Razorpay order (single order constraint)
-    // The verification will handle all items
     const orderResponse = await fetch(`${API_URL}/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,7 +111,7 @@ async function processCheckout(event) {
     };
     localStorage.setItem('pending_order', JSON.stringify(orderInfo));
     
-    // Initialize Razorpay with key from server - using redirect for success page handling
+    // Initialize Razorpay with key from server
     const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
@@ -126,7 +125,7 @@ async function processCheckout(event) {
         localStorage.setItem('payment_cart', JSON.stringify(cart));
         localStorage.setItem('payment_customer_email', customerEmail);
         localStorage.setItem('payment_customer_name', customerName);
-        // Redirect to success page
+        // Redirect to success page which will verify and redirect to download
         window.location.href = '/success';
       },
       prefill: {
@@ -143,9 +142,7 @@ async function processCheckout(event) {
           btn.disabled = false;
           btn.textContent = 'Proceed to Payment';
         }
-      },
-      redirect: true,
-      callback_url: window.location.origin + '/success'
+      }
     };
     
     const razorpay = new Razorpay(razorpayOptions);
@@ -157,66 +154,6 @@ async function processCheckout(event) {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Proceed to Payment';
-  }
-}
-
-// Verify payment and process all cart items
-async function verifyPayment(paymentResponse, cart, customerEmail, customerName) {
-  try {
-    // Verify and create orders for ALL items in cart
-    const productIds = cart.map(item => item.id);
-    let allSuccessful = true;
-    let createdOrders = [];
-    
-    for (const productId of productIds) {
-      const response = await fetch(`${API_URL}/verify-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpayOrderId: paymentResponse.razorpay_order_id,
-          razorpayPaymentId: paymentResponse.razorpay_payment_id,
-          razorpaySignature: paymentResponse.razorpay_signature || 'demo',
-          productId,
-          customerEmail,
-          customerName
-        })
-      });
-      
-      const result = await response.json();
-      if (result.success && result.order) {
-        createdOrders.push(result.order);
-      } else {
-        console.error('Payment verification failed for product:', productId);
-        allSuccessful = false;
-      }
-    }
-    
-if (allSuccessful && createdOrders.length > 0) {
-      // Clear cart after successful payment
-      localStorage.removeItem('tnpsc_cart');
-      
-      // Get first order ID and product ID for redirect
-      const firstOrder = createdOrders[0];
-      const firstOrderId = firstOrder.id;
-      const productId = firstOrder.productId;
-      
-      // Map product to download page
-      const downloadPageMap = {
-        'prod_001': '/tamil-download',
-        'prod_002': '/gk-download',
-        'prod_003': '/combo-download'
-      };
-      
-      const downloadPage = downloadPageMap[productId] || '/success';
-      
-      // Redirect to product-specific download page
-      window.location.href = `${downloadPage}?order=${firstOrderId}`;
-    } else {
-      alert('Payment verification failed. Please contact support.');
-    }
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    alert('Payment was successful but verification failed. Please contact support with your payment ID.');
   }
 }
 
