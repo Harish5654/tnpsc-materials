@@ -120,9 +120,9 @@ async function processCheckout(event) {
       name: 'TNPSC Materials',
       description: `Purchase: ${productNames}`,
       order_id: orderData.id,
-      handler: async function(response) {
+      handler: function(response) {
         // Payment successful - verify and process all items in cart
-        await verifyPayment(response, cart, customerEmail, customerName);
+        verifyPayment(response, cart, customerEmail, customerName);
       },
       prefill: {
         name: customerName,
@@ -131,8 +131,14 @@ async function processCheckout(event) {
       },
       theme: {
         color: '#667eea'
+      },
+      modal: {
+        ondismiss: function() {
+          console.log('Payment modal dismissed');
+          btn.disabled = false;
+          btn.textContent = 'Proceed to Payment';
+        }
       }
-      // Removed redirect: true and callback_url - handler function will handle the redirect
     };
     
     const razorpay = new Razorpay(razorpayOptions);
