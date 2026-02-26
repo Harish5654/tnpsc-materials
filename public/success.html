@@ -45,7 +45,7 @@
 <script>
     var API_URL = '/api';
     var params = new URLSearchParams(window.location.search);
-    var orderId = params.get('order') || params.get('orderId');
+    var orderId = params.get('order') || params.get('orderId') || params.get('order_id');
     var productId = params.get('product_id') || params.get('productId');
     var status = params.get('status');
     
@@ -54,15 +54,54 @@
     var razorpayPaymentId = params.get('razorpay_payment_id');
     var razorpaySignature = params.get('razorpay_signature');
     
+    // Check if we have a pending order in localStorage
+    var pendingOrder = null;
+    try {
+      pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
+    } catch(e) {}
+    
     if (status === 'failed') {
       showFailedPage();
     } else if (razorpayOrderId && razorpayPaymentId && productId) {
       // Handle Razorpay redirect callback - verify payment and create order
       verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId);
     } else if (orderId) {
+      // We have an order ID, verify it
       verifyOrder(orderId);
+    } else if (pendingOrder && pendingOrder.razorpayOrderId && pendingOrder.productId) {
+      // No callback params but we have pending order in localStorage - verify it
+      verifyPendingOrder(pendingOrder);
     } else {
       showWelcomePage();
+    }
+    
+    function verifyPendingOrder(pendingOrder) {
+      fetch(API_URL + '/verify-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpayOrderId: pendingOrder.razorpayOrderId,
+          razorpayPaymentId: 'pending_verification',
+          razorpaySignature: null,
+          productId: pendingOrder.productId,
+          customerEmail: pendingOrder.customerEmail,
+          customerName: pendingOrder.customerName
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success && data.order) {
+          localStorage.removeItem('pending_order');
+          localStorage.removeItem('tnpsc_cart');
+          showSuccessPage({ order: data.order, product: data.order });
+        } else {
+          showErrorPage();
+        }
+      })
+      .catch(function(err) {
+        console.error('Error verifying pending order:', err);
+        showErrorPage();
+      });
     }
     
     function verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId) {
@@ -79,7 +118,8 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.success && data.order) {
-          // Order created successfully, now show download page
+          localStorage.removeItem('pending_order');
+          localStorage.removeItem('tnpsc_cart');
           showSuccessPage({ order: data.order, product: data.order });
         } else {
           showErrorPage();

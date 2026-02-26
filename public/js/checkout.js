@@ -102,8 +102,18 @@ async function processCheckout(event) {
       throw new Error(orderData.error);
     }
     
+    // Store order info in localStorage for verification after redirect
+    const orderInfo = {
+      razorpayOrderId: orderData.id,
+      productId: cart[0].id,
+      customerEmail,
+      customerName,
+      cart: cart
+    };
+    localStorage.setItem('pending_order', JSON.stringify(orderInfo));
+    
     // Initialize Razorpay with key from server
-const razorpayOptions = {
+    const razorpayOptions = {
       key: razorpayKeyId,
       amount: orderData.amount,
       currency: 'INR',
@@ -124,7 +134,7 @@ const razorpayOptions = {
       },
       // Enable redirect for UPI/GPay payments
       redirect: true,
-      callback_url: `${window.location.origin}/success?productId=${cart[0].id}`
+      callback_url: `${window.location.origin}/success?order_id=${orderData.id}&productId=${cart[0].id}`
     };
     
     const razorpay = new Razorpay(razorpayOptions);
