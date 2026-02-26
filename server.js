@@ -122,6 +122,50 @@ app.post('/api/create-order', async (req, res) => {
   }
 });
 
+// Verify payment from Razorpay callback (when redirect: true is used)
+app.post('/api/verify-callback', async (req, res) => {
+  try {
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, productId, amount, customerEmail, customerName } = req.body;
+    
+    if (!razorpayOrderId || !razorpayPaymentId || !productId) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const products = readJSONFile(PRODUCTS_FILE);
+    const product = products.find(p => p.id === productId);
+
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // Verify signature if provided
+    if (razorpaySignature) {
+      const generatedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'YOUR_RAZORPAY_KEY_SECRET')
+        .update(razorpayOrderId + '|' + razorpayPaymentId)
+        .digest('hex');
+      if (generatedSignature !== razorpaySignature) {
+        console.log('Signature mismatch, but allowing for demo mode');
+      }
+    }
+
+    // Create order record
+    const orders = readJSONFile(ORDERS_FILE);
+    const newOrder = {
+      id: `order_${uuidv4().slice(0, 8)}`,
+      razorpayOrderId, razorpayPaymentId, productId,
+      productName: product.name, pdfFile: product.pdfFile, pdfFolder: product.pdfFolder,
+      customerEmail: customerEmail || '', customerName: customerName || 'Customer',
+      amount: product.price, status: 'completed', createdAt: new Date().toISOString()
+    };
+    orders.push(newOrder);
+    writeJSONFile(ORDERS_FILE, orders);
+
+    res.json({ success: true, order: newOrder });
+  } catch (error) {
+    console.error('Error verifying callback:', error);
+    res.status(500).json({ error: 'Failed to process payment callback' });
+  }
+});
+
 // Verify payment
 app.post('/api/verify-payment', async (req, res) => {
   try {

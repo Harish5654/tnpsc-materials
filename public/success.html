@@ -42,23 +42,53 @@
     <p class="subtitle">Please wait while we verify your payment.</p>
   </div>
 
-  <script>
+<script>
     var API_URL = '/api';
     var params = new URLSearchParams(window.location.search);
-var orderId = params.get('order') || params.get('orderId');
+    var orderId = params.get('order') || params.get('orderId');
     var productId = params.get('product_id') || params.get('productId');
     var status = params.get('status');
     
     // Handle Razorpay callback redirect parameters
     var razorpayOrderId = params.get('razorpay_order_id');
     var razorpayPaymentId = params.get('razorpay_payment_id');
+    var razorpaySignature = params.get('razorpay_signature');
     
     if (status === 'failed') {
       showFailedPage();
+    } else if (razorpayOrderId && razorpayPaymentId && productId) {
+      // Handle Razorpay redirect callback - verify payment and create order
+      verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId);
     } else if (orderId) {
       verifyOrder(orderId);
     } else {
       showWelcomePage();
+    }
+    
+    function verifyRazorpayCallback(razorpayOrderId, razorpayPaymentId, razorpaySignature, productId) {
+      fetch(API_URL + '/verify-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpayOrderId: razorpayOrderId,
+          razorpayPaymentId: razorpayPaymentId,
+          razorpaySignature: razorpaySignature,
+          productId: productId
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success && data.order) {
+          // Order created successfully, now show download page
+          showSuccessPage({ order: data.order, product: data.order });
+        } else {
+          showErrorPage();
+        }
+      })
+      .catch(function(err) {
+        console.error('Error verifying payment:', err);
+        showErrorPage();
+      });
     }
     
     function showFailedPage() {
