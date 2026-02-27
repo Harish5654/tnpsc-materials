@@ -567,6 +567,10 @@ app.get('/verify-payment', (req, res) => res.sendFile(path.join(__dirname, 'publ
 app.get('/tamil-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tamil-download.html')));
 app.get('/gk-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gk-download.html')));
 app.get('/combo-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'combo-download.html')));
+// Simplified download pages (new approach - direct Razorpay callback)
+app.get('/download-tamil', (req, res) => res.sendFile(path.join(__dirname, 'public', 'download-tamil.html')));
+app.get('/download-gk', (req, res) => res.sendFile(path.join(__dirname, 'public', 'download-gk.html')));
+app.get('/download-combo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'download-combo.html')));
 app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
 app.get('/admin/products', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'products.html')));
