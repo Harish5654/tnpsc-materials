@@ -243,8 +243,8 @@
         '<div class="error-container">' +
         '<div class="error-icon">❌</div>' +
         '<h1>Payment Failed</h1>' +
-        '<p class="subtitle">Your payment was not completed. Please make a payment to access the notes.</p>' +
-        '<a href="/products" class="retry-btn">Try Again</a>' +
+        '<p class="subtitle">Please complete payment to access download</p>' +
+        '<a href="/checkout" style="display:inline-block;background:#667eea;color:white;padding:12px 30px;border-radius:25px;text-decoration:none;font-weight:bold;margin-top:20px;">Try Again</a>' +
         '</div>';
     }
     
@@ -279,9 +279,9 @@
       
       // Map products to their download pages
       var downloadPageMap = {
-        'prod_001': '/tamil-download?order=',
-        'prod_002': '/gk-download?order=',
-        'prod_003': '/combo-download?order='
+        'prod_001': '/download-tamil?order=',
+        'prod_002': '/download-gk?order=',
+        'prod_003': '/download-combo?order='
       };
       
       var downloadUrl = (downloadPageMap[prodId] || '/products?order=') + orderId;
@@ -292,12 +292,26 @@
         productId: prodId
       }));
       
-      console.log('Payment verified. Redirecting to:', downloadUrl);
+      console.log('Payment verified. Download URL:', downloadUrl);
       
-      // Redirect immediately to download page
-      setTimeout(function() {
-        window.location.href = downloadUrl;
-      }, 300);
+      // Show success page with download button instead of auto-redirecting
+      container.innerHTML = 
+        '<div class="success-icon">✅</div>' +
+        '<h1>Payment Successful!</h1>' +
+        '<p class="subtitle">Your payment has been completed successfully.</p>' +
+        '<div class="order-details">' +
+        '<h3>Order Details</h3>' +
+        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value">' + orderId.substring(0, 12) + '...</span></div>' +
+        '<div class="order-row"><span class="order-label">Product:</span><span class="order-value">' + (data.product.name || 'Study Material') + '</span></div>' +
+        '<div class="order-row"><span class="order-label">Amount:</span><span class="order-value">₹' + (data.order.amount || data.product.price) + '</span></div>' +
+        '</div>' +
+        '<a href="' + downloadUrl + '" class="download-btn" style="display:inline-block;cursor:pointer;">📥 Click here to download your PDF</a>' +
+        '<br><br>' +
+        '<a href="/products" class="home-btn">← Back to Shop</a>' +
+        '<div class="whatsapp-support">' +
+        '<p>Need help? Contact us on WhatsApp:</p>' +
+        '<a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank">💬 Chat on WhatsApp</a>' +
+        '</div>';
     }
     
     function loadPdfList(orderId) {
@@ -335,10 +349,13 @@
     function showErrorPage() {
       document.getElementById('page-content').innerHTML = 
         '<div class="error-container">' +
-        '<div class="error-icon">⚠️</div>' +
-        '<h1>Order Not Found</h1>' +
-        '<p class="subtitle">Please contact support with your payment details.</p>' +
-        '<a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank">💬 Contact Support</a>' +
+        '<div class="error-icon">⏳</div>' +
+        '<h1>Payment Not Completed</h1>' +
+        '<p class="subtitle">Please complete payment to access download</p>' +
+        '<p style="color:#999;font-size:0.9rem;margin-top:15px;">If you have already completed payment, please contact our support team.</p>' +
+        '<a href="/products" style="display:inline-block;background:#667eea;color:white;padding:12px 30px;border-radius:25px;text-decoration:none;font-weight:bold;margin-top:20px;">← Back to Shop</a>' +
+        '<br><br>' +
+        '<a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank" style="display:inline-block;">💬 Contact Support</a>' +
         '</div>';
     }
   </script>
