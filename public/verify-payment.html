@@ -32,7 +32,9 @@
     const razorpayPaymentId = params.get('razorpay_payment_id');
     const razorpayOrderId = params.get('razorpay_order_id');
     const razorpaySignature = params.get('razorpay_signature');
-    const productId = params.get('product_id') || params.get('productId');
+    
+    // Optional: product ID can be passed in URL if Razorpay is configured to do so
+    const productIdParam = params.get('product_id') || params.get('productId') || params.get('product');
     
     // Map product IDs to download pages
     const downloadPageMap = {
@@ -52,19 +54,21 @@
     log('URL: ' + window.location.href);
     log('Razorpay Payment ID: ' + (razorpayPaymentId || 'Not found'));
     log('Razorpay Order ID: ' + (razorpayOrderId || 'Not found'));
-    log('Product ID: ' + (productId || 'Not found'));
+    log('Product ID: ' + (productIdParam || 'Not in URL (will auto-detect)'));
     
     // Function to verify payment with backend
     function verifyPayment() {
       if (!razorpayPaymentId || !razorpayOrderId) {
         log('❌ Missing Razorpay payment parameters');
-        log('Redirecting to products page...');
+        log('If you just completed payment, this may take a moment to process...');
+        log('Waiting 2 seconds before redirecting...');
         setTimeout(() => {
           window.location.href = '/products';
         }, 2000);
         return;
       }
       
+      log('✓ Found payment parameters');
       log('Verifying with backend...');
       
       // Call backend to verify payment and get order details
@@ -74,36 +78,45 @@
         body: JSON.stringify({
           razorpayPaymentId: razorpayPaymentId,
           razorpayOrderId: razorpayOrderId,
-          razorpaySignature: razorpaySignature || ''
+          razorpaySignature: razorpaySignature || '',
+          productId: productIdParam || null
         })
       })
-      .then(res => res.json())
+      .then(res => {
+        log('Response status: ' + res.status);
+        return res.json();
+      })
       .then(data => {
         log('Backend response: ' + JSON.stringify(data));
         
         if (data.success && data.order) {
           log('✓ Payment verified! Order ID: ' + data.order.id);
+          log('Product: ' + (data.order.productName || data.order.productId));
           
           const downloadPage = downloadPageMap[data.order.productId] || '/products';
-          log('Redirecting to: ' + downloadPage + '?order=' + data.order.id);
+          log('✓ Redirecting to: ' + downloadPage + '?order=' + data.order.id);
           
           // Redirect to appropriate download page with order ID
           setTimeout(() => {
             window.location.href = downloadPage + '?order=' + data.order.id;
-          }, 1000);
+          }, 1500);
         } else {
-          log('❌ Payment verification failed: ' + (data.error || 'Unknown error'));
+          log('❌ Payment verification failed')
+          log('Error: ' + (data.error || 'Unknown error'));
+          if (data.debug) {
+            log('Debug: ' + JSON.stringify(data.debug));
+          }
           log('Redirecting to products page...');
           setTimeout(() => {
             window.location.href = '/products';
-          }, 2000);
+          }, 3000);
         }
       })
       .catch(err => {
-        log('❌ Error: ' + err.message);
-        log('Redirecting to products page...');
+        log('❌ Network error: ' + err.message);
+        log('Retrying...');
         setTimeout(() => {
-          window.location.href = '/products';
+          verifyPayment();
         }, 2000);
       });
     }

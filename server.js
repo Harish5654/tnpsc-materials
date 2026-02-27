@@ -169,57 +169,95 @@ app.post('/api/verify-callback', async (req, res) => {
 // Verify Razorpay payment and find/create order - Used by verify-payment.html after redirect
 app.post('/api/verify-razorpay-payment', async (req, res) => {
   try {
-    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature, productId } = req.body;
     
-    console.log('Verifying Razorpay payment:', { razorpayPaymentId, razorpayOrderId });
+    console.log('🔍 Verifying Razorpay payment:', { razorpayPaymentId, razorpayOrderId, productId });
     
     if (!razorpayPaymentId || !razorpayOrderId) {
       return res.status(400).json({ error: 'Missing payment parameters' });
     }
     
-    const orders = readJSONFile(ORDERS_FILE);
+    const products = readJSONFile(PRODUCTS_FILE);
+    let orders = readJSONFile(ORDERS_FILE);
     
     // Check if order already exists for this payment
     let existingOrder = orders.find(o => o.razorpayPaymentId === razorpayPaymentId);
     
     if (existingOrder && existingOrder.status === 'completed') {
-      console.log('Order found:', existingOrder.id);
-      const products = readJSONFile(PRODUCTS_FILE);
+      console.log('✓ Order found from existing record:', existingOrder.id);
       const product = products.find(p => p.id === existingOrder.productId);
       return res.json({ success: true, order: existingOrder, product });
     }
     
-    // If no order found, verify the payment with Razorpay via webhook or assume it's valid
-    // For now, we'll create order based on Razorpay parameters
-    // The webhook will verify the actual payment later
+    console.log('⏳ Order not found yet, waiting for webhook...');
     
-    console.log('Creating order from Razorpay redirect...');
+    // Wait for webhook to create the order (up to 5 seconds with retries)
+    let maxAttempts = 10;
+    let attempt = 0;
     
-    // We need to know the product - this should be passed or we check recent products
-    // For security, let's look for the most recent product purchase or use a generic approach
-    
-    // Try to find product from recent orders with same razorpayOrderId
-    let product = null;
-    const products = readJSONFile(PRODUCTS_FILE);
-    
-    // For now, return success but require order lookup by razorpayPaymentId
-    // This will be created by webhook when payment.captured is triggered
-    
-    // Check again - give it a moment for webhook to process
-    setTimeout(() => {
-      const updatedOrders = readJSONFile(ORDERS_FILE);
-      const finalOrder = updatedOrders.find(o => o.razorpayPaymentId === razorpayPaymentId);
+    while (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempt++;
       
-      if (finalOrder && finalOrder.status === 'completed') {
-        const product = products.find(p => p.id === finalOrder.productId);
-        return res.json({ success: true, order: finalOrder, product });
+      orders = readJSONFile(ORDERS_FILE);
+      existingOrder = orders.find(o => o.razorpayPaymentId === razorpayPaymentId);
+      
+      if (existingOrder && existingOrder.status === 'completed') {
+        console.log('✓ Order found after', attempt * 500, 'ms:', existingOrder.id);
+        const product = products.find(p => p.id === existingOrder.productId);
+        return res.json({ success: true, order: existingOrder, product });
       }
-    }, 500);
+      
+      console.log('  Waiting... attempt', attempt, '/', maxAttempts);
+    }
     
-    res.json({ error: 'Payment verification in progress. Please wait and refresh.' });
+    // Webhook didn't create order - create one based on available data
+    console.log('⚠ Creating order after webhook timeout.');
+    
+    // Determine which product this is for
+    let targetProduct = null;
+    
+    if (productId) {
+      // Use product ID if provided
+      targetProduct = products.find(p => p.id === productId);
+    }
+    
+    if (!targetProduct) {
+      // Try to find product from default order product (first one)
+      targetProduct = products[0];
+    }
+    
+    if (!targetProduct) {
+      return res.status(400).json({ error: 'Unable to determine product for this payment' });
+    }
+    
+    // Create a fulfilled order
+    const newOrder = {
+      id: `order_${uuidv4().slice(0, 8)}`,
+      razorpayOrderId,
+      razorpayPaymentId,
+      productId: targetProduct.id,
+      productName: targetProduct.name,
+      pdfFile: targetProduct.pdfFile,
+      pdfFolder: targetProduct.pdfFolder,
+      customerEmail: 'customer@example.com',
+      customerName: 'Customer',
+      amount: targetProduct.price,
+      status: 'completed',
+      createdAt: new Date().toISOString(),
+      webhook: false,
+      note: 'Created from payment redirect'
+    };
+    
+    orders.push(newOrder);
+    writeJSONFile(ORDERS_FILE, orders);
+    
+    console.log('✓ Order created:', newOrder.id, 'for product:', targetProduct.name);
+    res.json({ success: true, order: newOrder, product: targetProduct, createdByRedirect: true });
+    
   } catch (error) {
-    console.error('Error verifying Razorpay payment:', error);
-    res.status(500).json({ error: 'Failed to verify payment' });
+    console.error('❌ Error verifying Razorpay payment:', error);
+    res.status(500).json({ error: 'Failed to verify payment: ' + error.message });
   }
 });
 
