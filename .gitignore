@@ -5,9 +5,6 @@ node_modules/
 .env
 .env.local
 
-# PDF files (keep in private storage)
-pdf-storage/
-
 # IDE
 .vscode/
 *.swp
