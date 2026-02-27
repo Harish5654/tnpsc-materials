@@ -53,6 +53,11 @@
     var params = new URLSearchParams(window.location.search);
     var orderId = params.get('order') || params.get('orderId') || params.get('order_id');
     
+    // Razorpay redirect parameters
+    var razorpayPaymentId = params.get('razorpay_payment_id');
+    var razorpayOrderId = params.get('razorpay_order_id');
+    var razorpaySignature = params.get('razorpay_signature');
+    
     // Product info for this page
     var PRODUCT_ID = 'prod_001';
     var PRODUCT_NAME = 'General Tamil Notes';
@@ -60,41 +65,142 @@
     
     // Check if user has valid order
     function verifyAccess() {
-      if (!orderId) {
-        // Check localStorage for order
-        try {
-          var pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
-          if (pendingOrder && pendingOrder.orderId) {
-            orderId = pendingOrder.orderId;
-          }
-        } catch(e) {}
+      console.log('=== Download Page Debug Info ===');
+      console.log('URL:', window.location.href);
+      console.log('Order ID:', orderId);
+      console.log('Razorpay Payment ID:', razorpayPaymentId);
+      console.log('Razorpay Order ID:', razorpayOrderId);
+      console.log('Product ID (this page):', PRODUCT_ID);
+      console.log('================================');
+      
+      // First check for order ID in URL
+      if (orderId) {
+        console.log('Found orderId in URL, verifying...');
+        verifyOrder(orderId);
+        return;
       }
       
-      if (orderId) {
-        verifyOrder(orderId);
-      } else {
-        showErrorPage();
+      // Check for Razorpay payment parameters - need to verify payment and create order
+      if (razorpayPaymentId && razorpayOrderId) {
+        console.log('Found Razorpay parameters, verifying payment...');
+        verifyRazorpayPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+        return;
       }
+      
+      // Check localStorage for order (from checkout flow)
+      try {
+        var verifiedOrder = JSON.parse(localStorage.getItem('verified_order'));
+        if (verifiedOrder && verifiedOrder.orderId) {
+          console.log('Found verified order in localStorage:', verifiedOrder.orderId);
+          orderId = verifiedOrder.orderId;
+          verifyOrder(orderId);
+          return;
+        }
+        
+        var pendingOrder = JSON.parse(localStorage.getItem('pending_order'));
+        if (pendingOrder && pendingOrder.orderId) {
+          console.log('Found pending order in localStorage:', pendingOrder.orderId);
+          orderId = pendingOrder.orderId;
+          verifyOrder(orderId);
+          return;
+        }
+      } catch(e) {
+        console.error('Error checking localStorage:', e);
+      }
+      
+      // No valid order found
+      console.log('No valid order found - showing error page');
+      showErrorPage();
+    }
+    
+    function verifyRazorpayPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature) {
+      console.log('=== Verifying Razorpay Payment ===');
+      console.log('Order ID:', razorpayOrderId);
+      console.log('Payment ID:', razorpayPaymentId);
+      
+      // Get customer info from localStorage
+      var customerEmail = '';
+      var customerName = '';
+      try {
+        customerEmail = localStorage.getItem('payment_customer_email') || '';
+        customerName = localStorage.getItem('payment_customer_name') || '';
+      } catch(e) {}
+      
+      var payload = {
+        razorpayOrderId: razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId,
+        razorpaySignature: razorpaySignature || '',
+        productId: PRODUCT_ID,
+        customerEmail: customerEmail,
+        customerName: customerName
+      };
+      
+      console.log('Sending verify-callback request with:', payload);
+      
+      fetch(API_URL + '/verify-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) {
+        console.log('Response status:', res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        console.log('Payment verification response:', data);
+        if (data.success && data.order) {
+          console.log('✓ Payment verified! Order ID:', data.order.id);
+          // Store order info
+          localStorage.setItem('verified_order', JSON.stringify({
+            orderId: data.order.id,
+            productId: data.order.productId
+          }));
+          localStorage.removeItem('pending_order');
+          localStorage.removeItem('payment_response');
+          localStorage.removeItem('payment_cart');
+          
+          showDownloadPage({ order: data.order, product: data.order });
+        } else {
+          console.error('✗ Payment verification failed:', data);
+          showErrorPage();
+        }
+      })
+      .catch(function(err) {
+        console.error('✗ Error verifying payment:', err);
+        showErrorPage();
+      });
     }
     
     function verifyOrder(orderId) {
+      console.log('=== Verifying Order ===');
+      console.log('Order ID:', orderId);
+      
       fetch(API_URL + '/order/' + orderId)
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          console.log('Order verification response status:', res.status);
+          return res.json();
+        })
         .then(function(data) {
+          console.log('Order data:', data);
           if (data.downloadReady && data.product) {
+            console.log('✓ Order verified! Product ID:', data.product.id);
             // Verify this is the correct product
             if (data.product.id === PRODUCT_ID || data.order.productId === PRODUCT_ID) {
+              console.log('✓ Correct product match');
               showDownloadPage(data);
             } else {
+              console.log('✗ Product mismatch. Expected:', PRODUCT_ID, 'Got:', data.product.id);
               // Wrong product - redirect to correct download page
               var redirectMap = {
                 'prod_002': '/gk-download',
                 'prod_003': '/combo-download'
               };
               var redirectUrl = redirectMap[data.order.productId] || '/products';
+              console.log('Redirecting to:', redirectUrl);
               window.location.href = redirectUrl + '?order=' + orderId;
             }
           } else {
+            console.error('✗ Order verification failed:', data);
             showErrorPage();
           }
         })
@@ -112,17 +218,27 @@
         '<div class="success-icon">✅</div>' +
         '<div class="product-badge">📚 ' + data.product.name + '</div>' +
         '<h1>Payment Successful!</h1>' +
-        '<p class="subtitle">Your PDF notes are ready for download.</p>' +
+        '<p class="subtitle">Your PDF notes are ready for download instantly.</p>' +
         '<div class="order-details">' +
-        '<h3>📋 Order Details</h3>' +
-        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value">' + data.order.id + '</span></div>' +
+        '<h3>📋 Order Information</h3>' +
+        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value">' + data.order.id.substring(0, 12) + '...</span></div>' +
         '<div class="order-row"><span class="order-label">Product:</span><span class="order-value">' + data.product.name + '</span></div>' +
         '<div class="order-row"><span class="order-label">Amount Paid:</span><span class="order-value">₹' + data.order.amount + '</span></div>' +
+        '<div class="order-row"><span class="order-label">Purchase Date:</span><span class="order-value">' + new Date(data.order.createdAt).toLocaleDateString('en-IN') + '</span></div>' +
         '</div>' +
-        '<div id="pdf-list-container"><p>Loading your PDFs...</p></div>' +
-        '<br>' +
-        '<a href="/download-all/' + orderId + '" class="download-btn" id="download-all-btn">📦 Download All as ZIP</a>' +
+        '<div id="pdf-list-container"><p>Loading files...</p></div>' +
+        '<div style="background:#e3f2fd;border-left:4px solid #2196F3;padding:15px;border-radius:8px;margin:20px 0;text-align:left;">' +
+        '<h4 style="color:#1976D2;margin-bottom:8px;">💡 Download Options</h4>' +
+        '<p style="color:#555;font-size:0.95rem;margin:0;">• Click individual PDFs above to download specific files</p>' +
+        '<p style="color:#555;font-size:0.95rem;margin:8px 0 0 0;">• Or download all files as one ZIP archive below</p>' +
+        '</div>' +
+        '<button onclick="downloadAllAsZip(\'' + orderId + '\')" class="download-btn" id="download-all-btn" style="width:100%;cursor:pointer;">📦 Download All as ZIP</button>' +
         '<br><br>' +
+        '<div style="background:#fff3e0;border-left:4px solid #FF9800;padding:15px;border-radius:8px;margin-bottom:20px;text-align:left;">' +
+        '<h4 style="color:#E65100;margin-bottom:8px;">📌 Important Notes</h4>' +
+        '<p style="color:#555;font-size:0.9rem;margin:0;">✓ Your files are available for 30 days</p>' +
+        '<p style="color:#555;font-size:0.9rem;margin:8px 0 0 0;">✓ You can download multiple times</p>' +
+        '</div>' +
         '<a href="/products" class="home-btn">← Browse More Products</a>' +
         '<div class="whatsapp-support">' +
         '<p>Need help? Contact us on WhatsApp:</p>' +
@@ -132,6 +248,24 @@
       loadPdfList(orderId);
     }
     
+    function downloadAllAsZip(orderId) {
+      var btn = document.getElementById('download-all-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Preparing ZIP...';
+      
+      var link = document.createElement('a');
+      link.href = '/download-all/' + orderId;
+      link.download = 'TNPSC_Notes_' + orderId + '.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(function() {
+        btn.disabled = false;
+        btn.textContent = '📦 Download All as ZIP';
+      }, 2000);
+    }
+    
     function loadPdfList(orderId) {
       fetch(API_URL + '/order-pdfs/' + orderId)
         .then(function(res) { return res.json(); })
@@ -139,19 +273,26 @@
           var container = document.getElementById('pdf-list-container');
           
           if (data.files && data.files.length > 0) {
-            var html = '<div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:15px;text-align:left;">' +
-              '<h4 style="margin-bottom:10px;">📄 Included PDFs (' + data.files.length + ' files):</h4>' +
+            var html = '<div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:20px;text-align:left;">' +
+              '<h4 style="margin-bottom:15px;color:#333;">📄 Included PDFs (' + data.files.length + ' files):</h4>' +
               '<div class="pdf-list">';
             
             data.files.forEach(function(file) {
               var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-              html += '<div class="pdf-item"><span class="pdf-name">' + file.name + '</span><span class="pdf-size">' + sizeMB + ' MB</span></div>';
+              var fileNum = data.files.indexOf(file) + 1;
+              html += '<div class="pdf-item" style="background:white;border:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;padding:12px;">' +
+                '<div style="flex:1;">' +
+                '<div class="pdf-name" style="font-weight:500;margin-bottom:4px;">📑 ' + file.name + '</div>' +
+                '<div class="pdf-size" style="font-size:0.8rem;color:#999;">Size: ' + sizeMB + ' MB</div>' +
+                '</div>' +
+                '<a href="/download/' + orderId + '?file=' + fileNum + '" style="background:#667eea;color:white;padding:8px 12px;border-radius:6px;text-decoration:none;font-size:0.85rem;white-space:nowrap;margin-left:10px;transition:background 0.3s;" onmouseover="this.style.background=\'#5568d3\'" onmouseout="this.style.background=\'#667eea\'">⬇️ Download</a>' +
+                '</div>';
             });
             
             html += '</div></div>';
             container.innerHTML = html;
           } else {
-            container.innerHTML = '<p style="color:#666;">Click the button below to download your PDFs.</p>';
+            container.innerHTML = '<p style="color:#666;">Your PDF files are being prepared. Click the download button below.</p>';
           }
         })
         .catch(function(err) {
@@ -161,22 +302,30 @@
     }
     
     function showErrorPage() {
+      var debugInfo = 'URL: ' + window.location.href + '<br>' +
+        'Order ID: ' + (orderId || 'None') + '<br>' +
+        'Razorpay Payment ID: ' + (razorpayPaymentId || 'None') + '<br>' +
+        'Razorpay Order ID: ' + (razorpayOrderId || 'None');
+      
       document.getElementById('page-content').innerHTML = 
         '<div class="error-container">' +
         '<div class="error-icon">🔒</div>' +
         '<h1>Access Denied</h1>' +
         '<p class="subtitle">Please complete the payment to access the materials.</p>' +
+        '<div style="background:#fff3e0;border-left:4px solid #FF9800;padding:15px;border-radius:8px;margin:20px 0;text-align:left;font-size:0.8rem;color:#666;">' +
+        '<strong>Debug Info:</strong><br>' + debugInfo +
+        '</div>' +
         '<a href="/products" class="retry-btn">Buy Now</a>' +
         '<br><br>' +
         '<a href="/" class="home-btn">← Back to Home</a>' +
         '<div class="whatsapp-support">' +
-        '<p>Need help? Contact us on WhatsApp:</p>' +
+        '<p>Need help? Contact us on WhatsApp (include debug info above):</p>' +
         '<a href="https://wa.me/918072563583" class="whatsapp-btn" target="_blank">💬 Chat on WhatsApp</a>' +
+        '</div>' +
         '</div>';
+      
+      console.log('ERROR PAGE SHOWN - Debug Info:', {url: window.location.href, orderId, razorpayPaymentId, razorpayOrderId});
     }
-    
-    // Initialize
-    verifyAccess();
   </script>
 </body>
 </html>

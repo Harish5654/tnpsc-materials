@@ -106,6 +106,7 @@
             var firstOrderId = firstOrder.id;
             var productId = firstOrder.productId;
             
+            // Redirect to product-specific download page
             var downloadPageMap = {
               'prod_001': '/tamil-download',
               'prod_002': '/gk-download',
@@ -113,7 +114,18 @@
             };
             
             var downloadPage = downloadPageMap[productId] || '/products';
-            window.location.href = downloadPage + '?order=' + firstOrderId;
+            console.log('Payment verified. Redirecting to:', downloadPage + '?order=' + firstOrderId);
+            
+            // Store order info for download page
+            localStorage.setItem('verified_order', JSON.stringify({
+              orderId: firstOrderId,
+              productId: productId
+            }));
+            
+            // Redirect with small delay to ensure data is saved
+            setTimeout(function() {
+              window.location.href = downloadPage + '?order=' + firstOrderId;
+            }, 500);
           } else {
             showErrorPage();
           }
@@ -265,22 +277,27 @@
       var orderId = data.order.id;
       var prodId = data.order.productId || data.product.id;
       
-      console.log('Redirecting with orderId:', orderId, 'productId:', prodId);
-      
+      // Map products to their download pages
       var downloadPageMap = {
-        'prod_001': '/tamil-download',
-        'prod_002': '/gk-download',
-        'prod_003': '/combo-download'
+        'prod_001': '/tamil-download?order=',
+        'prod_002': '/gk-download?order=',
+        'prod_003': '/combo-download?order='
       };
       
-      var downloadPage = downloadPageMap[prodId] || '/products';
+      var downloadUrl = (downloadPageMap[prodId] || '/products?order=') + orderId;
       
+      // Store verified order info
       localStorage.setItem('verified_order', JSON.stringify({
         orderId: orderId,
         productId: prodId
       }));
       
-      window.location.href = downloadPage + '?order=' + orderId;
+      console.log('Payment verified. Redirecting to:', downloadUrl);
+      
+      // Redirect immediately to download page
+      setTimeout(function() {
+        window.location.href = downloadUrl;
+      }, 300);
     }
     
     function loadPdfList(orderId) {

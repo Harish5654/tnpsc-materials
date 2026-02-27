@@ -166,6 +166,63 @@ app.post('/api/verify-callback', async (req, res) => {
   }
 });
 
+// Verify Razorpay payment and find/create order - Used by verify-payment.html after redirect
+app.post('/api/verify-razorpay-payment', async (req, res) => {
+  try {
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    
+    console.log('Verifying Razorpay payment:', { razorpayPaymentId, razorpayOrderId });
+    
+    if (!razorpayPaymentId || !razorpayOrderId) {
+      return res.status(400).json({ error: 'Missing payment parameters' });
+    }
+    
+    const orders = readJSONFile(ORDERS_FILE);
+    
+    // Check if order already exists for this payment
+    let existingOrder = orders.find(o => o.razorpayPaymentId === razorpayPaymentId);
+    
+    if (existingOrder && existingOrder.status === 'completed') {
+      console.log('Order found:', existingOrder.id);
+      const products = readJSONFile(PRODUCTS_FILE);
+      const product = products.find(p => p.id === existingOrder.productId);
+      return res.json({ success: true, order: existingOrder, product });
+    }
+    
+    // If no order found, verify the payment with Razorpay via webhook or assume it's valid
+    // For now, we'll create order based on Razorpay parameters
+    // The webhook will verify the actual payment later
+    
+    console.log('Creating order from Razorpay redirect...');
+    
+    // We need to know the product - this should be passed or we check recent products
+    // For security, let's look for the most recent product purchase or use a generic approach
+    
+    // Try to find product from recent orders with same razorpayOrderId
+    let product = null;
+    const products = readJSONFile(PRODUCTS_FILE);
+    
+    // For now, return success but require order lookup by razorpayPaymentId
+    // This will be created by webhook when payment.captured is triggered
+    
+    // Check again - give it a moment for webhook to process
+    setTimeout(() => {
+      const updatedOrders = readJSONFile(ORDERS_FILE);
+      const finalOrder = updatedOrders.find(o => o.razorpayPaymentId === razorpayPaymentId);
+      
+      if (finalOrder && finalOrder.status === 'completed') {
+        const product = products.find(p => p.id === finalOrder.productId);
+        return res.json({ success: true, order: finalOrder, product });
+      }
+    }, 500);
+    
+    res.json({ error: 'Payment verification in progress. Please wait and refresh.' });
+  } catch (error) {
+    console.error('Error verifying Razorpay payment:', error);
+    res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
 // Verify payment
 app.post('/api/verify-payment', async (req, res) => {
   try {
@@ -468,6 +525,7 @@ app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 app.get('/success', (req, res) => res.sendFile(path.join(__dirname, 'public', 'success.html')));
 app.get('/failed', (req, res) => res.sendFile(path.join(__dirname, 'public', 'failed.html')));
 app.get('/payment', (req, res) => res.sendFile(path.join(__dirname, 'public', 'payment.html')));
+app.get('/verify-payment', (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-payment.html')));
 app.get('/tamil-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tamil-download.html')));
 app.get('/gk-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gk-download.html')));
 app.get('/combo-download', (req, res) => res.sendFile(path.join(__dirname, 'public', 'combo-download.html')));

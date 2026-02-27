@@ -115,17 +115,27 @@
         '<div class="success-icon">✅</div>' +
         '<div class="product-badge">🎁 ' + data.product.name + '</div>' +
         '<h1>Payment Successful!</h1>' +
-        '<p class="subtitle">Your PDF notes are ready for download.</p>' +
+        '<p class="subtitle">Your PDF notes are ready for download instantly.</p>' +
         '<div class="order-details">' +
-        '<h3>📋 Order Details</h3>' +
-        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value">' + data.order.id + '</span></div>' +
+        '<h3>📋 Order Information</h3>' +
+        '<div class="order-row"><span class="order-label">Order ID:</span><span class="order-value">' + data.order.id.substring(0, 12) + '...</span></div>' +
         '<div class="order-row"><span class="order-label">Product:</span><span class="order-value">' + data.product.name + '</span></div>' +
         '<div class="order-row"><span class="order-label">Amount Paid:</span><span class="order-value">₹' + data.order.amount + '</span></div>' +
+        '<div class="order-row"><span class="order-label">Purchase Date:</span><span class="order-value">' + new Date(data.order.createdAt).toLocaleDateString('en-IN') + '</span></div>' +
         '</div>' +
-        '<div id="pdf-list-container"><p>Loading your PDFs...</p></div>' +
-        '<br>' +
-        '<a href="/download-all/' + orderId + '" class="download-btn" id="download-all-btn">📦 Download All as ZIP</a>' +
+        '<div id="pdf-list-container"><p>Loading files...</p></div>' +
+        '<div style="background:#e3f2fd;border-left:4px solid #2196F3;padding:15px;border-radius:8px;margin:20px 0;text-align:left;">' +
+        '<h4 style="color:#1976D2;margin-bottom:8px;">💡 Download Options</h4>' +
+        '<p style="color:#555;font-size:0.95rem;margin:0;">• Click individual PDFs above to download specific files</p>' +
+        '<p style="color:#555;font-size:0.95rem;margin:8px 0 0 0;">• Or download all files as one ZIP archive below</p>' +
+        '</div>' +
+        '<button onclick="downloadAllAsZip(\'' + orderId + '\'" class="download-btn" id="download-all-btn" style="width:100%;cursor:pointer;">📦 Download All as ZIP</button>' +
         '<br><br>' +
+        '<div style="background:#fff3e0;border-left:4px solid #FF9800;padding:15px;border-radius:8px;margin-bottom:20px;text-align:left;">' +
+        '<h4 style="color:#E65100;margin-bottom:8px;">📌 Important Notes</h4>' +
+        '<p style="color:#555;font-size:0.9rem;margin:0;">✓ Your files are available for 30 days</p>' +
+        '<p style="color:#555;font-size:0.9rem;margin:8px 0 0 0;">✓ You can download multiple times</p>' +
+        '</div>' +
         '<a href="/products" class="home-btn">← Browse More Products</a>' +
         '<div class="whatsapp-support">' +
         '<p>Need help? Contact us on WhatsApp:</p>' +
@@ -135,6 +145,24 @@
       loadPdfList(orderId);
     }
     
+    function downloadAllAsZip(orderId) {
+      var btn = document.getElementById('download-all-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Preparing ZIP...';
+      
+      var link = document.createElement('a');
+      link.href = '/download-all/' + orderId;
+      link.download = 'TNPSC_Notes_' + orderId + '.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(function() {
+        btn.disabled = false;
+        btn.textContent = '📦 Download All as ZIP';
+      }, 2000);
+    }
+    
     function loadPdfList(orderId) {
       fetch(API_URL + '/order-pdfs/' + orderId)
         .then(function(res) { return res.json(); })
@@ -142,19 +170,26 @@
           var container = document.getElementById('pdf-list-container');
           
           if (data.files && data.files.length > 0) {
-            var html = '<div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:15px;text-align:left;">' +
-              '<h4 style="margin-bottom:10px;">📄 Included PDFs (' + data.files.length + ' files):</h4>' +
+            var html = '<div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:20px;text-align:left;">' +
+              '<h4 style="margin-bottom:15px;color:#333;">📄 Included PDFs (' + data.files.length + ' files):</h4>' +
               '<div class="pdf-list">';
             
             data.files.forEach(function(file) {
               var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-              html += '<div class="pdf-item"><span class="pdf-name">' + file.name + '</span><span class="pdf-size">' + sizeMB + ' MB</span></div>';
+              var fileNum = data.files.indexOf(file) + 1;
+              html += '<div class="pdf-item" style="background:white;border:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;padding:12px;">' +
+                '<div style="flex:1;">' +
+                '<div class="pdf-name" style="font-weight:500;margin-bottom:4px;">📑 ' + file.name + '</div>' +
+                '<div class="pdf-size" style="font-size:0.8rem;color:#999;">Size: ' + sizeMB + ' MB</div>' +
+                '</div>' +
+                '<a href="/download/' + orderId + '?file=' + fileNum + '" style="background:#f5576c;color:white;padding:8px 12px;border-radius:6px;text-decoration:none;font-size:0.85rem;white-space:nowrap;margin-left:10px;transition:background 0.3s;" onmouseover="this.style.background=\'#e64956\'" onmouseout="this.style.background=\'#f5576c\'">⬇️ Download</a>' +
+                '</div>';
             });
             
             html += '</div></div>';
             container.innerHTML = html;
           } else {
-            container.innerHTML = '<p style="color:#666;">Click the button below to download your PDFs.</p>';
+            container.innerHTML = '<p style="color:#666;">Your PDF files are being prepared. Click the download button below.</p>';
           }
         })
         .catch(function(err) {

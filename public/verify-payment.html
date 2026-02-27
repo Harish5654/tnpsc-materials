@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifying Payment - TNPSC Materials</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .container { background: white; border-radius: 20px; padding: 60px 40px; max-width: 500px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .spinner { width: 60px; height: 60px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 30px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    h1 { color: #333; font-size: 1.8rem; margin-bottom: 10px; }
+    p { color: #666; font-size: 1rem; margin-bottom: 30px; }
+    .debug-info { background: #f5f5f5; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: left; font-family: monospace; font-size: 0.8rem; color: #666; max-height: 150px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Verifying Payment...</h1>
+    <p>Please wait while we verify your payment and redirect you to download your materials.</p>
+    <div class="debug-info" id="debug-info"></div>
+  </div>
+
+  <script>
+    const API_URL = '/api';
+    const params = new URLSearchParams(window.location.search);
+    
+    // Get all possible payment parameters from Razorpay
+    const razorpayPaymentId = params.get('razorpay_payment_id');
+    const razorpayOrderId = params.get('razorpay_order_id');
+    const razorpaySignature = params.get('razorpay_signature');
+    const productId = params.get('product_id') || params.get('productId');
+    
+    // Map product IDs to download pages
+    const downloadPageMap = {
+      'prod_001': '/tamil-download',
+      'prod_002': '/gk-download',
+      'prod_003': '/combo-download'
+    };
+    
+    const debugDiv = document.getElementById('debug-info');
+    
+    function log(msg) {
+      console.log(msg);
+      debugDiv.innerHTML += msg + '<br>';
+    }
+    
+    log('=== Payment Verification Page ===');
+    log('URL: ' + window.location.href);
+    log('Razorpay Payment ID: ' + (razorpayPaymentId || 'Not found'));
+    log('Razorpay Order ID: ' + (razorpayOrderId || 'Not found'));
+    log('Product ID: ' + (productId || 'Not found'));
+    
+    // Function to verify payment with backend
+    function verifyPayment() {
+      if (!razorpayPaymentId || !razorpayOrderId) {
+        log('❌ Missing Razorpay payment parameters');
+        log('Redirecting to products page...');
+        setTimeout(() => {
+          window.location.href = '/products';
+        }, 2000);
+        return;
+      }
+      
+      log('Verifying with backend...');
+      
+      // Call backend to verify payment and get order details
+      fetch(API_URL + '/verify-razorpay-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpayPaymentId: razorpayPaymentId,
+          razorpayOrderId: razorpayOrderId,
+          razorpaySignature: razorpaySignature || ''
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        log('Backend response: ' + JSON.stringify(data));
+        
+        if (data.success && data.order) {
+          log('✓ Payment verified! Order ID: ' + data.order.id);
+          
+          const downloadPage = downloadPageMap[data.order.productId] || '/products';
+          log('Redirecting to: ' + downloadPage + '?order=' + data.order.id);
+          
+          // Redirect to appropriate download page with order ID
+          setTimeout(() => {
+            window.location.href = downloadPage + '?order=' + data.order.id;
+          }, 1000);
+        } else {
+          log('❌ Payment verification failed: ' + (data.error || 'Unknown error'));
+          log('Redirecting to products page...');
+          setTimeout(() => {
+            window.location.href = '/products';
+          }, 2000);
+        }
+      })
+      .catch(err => {
+        log('❌ Error: ' + err.message);
+        log('Redirecting to products page...');
+        setTimeout(() => {
+          window.location.href = '/products';
+        }, 2000);
+      });
+    }
+    
+    // Start verification
+    verifyPayment();
+  </script>
+</body>
+</html>
