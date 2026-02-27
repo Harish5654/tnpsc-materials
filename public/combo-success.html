@@ -34,7 +34,7 @@
     <div class="combo-badge">🎓 Tamil + 🧠 GK + All Extras</div>
     <p class="subtitle">Your PDF materials are ready for download. Click the button below to get your files.</p>
     
-    <a href="/download-combo?order=combo_success" class="download-btn">📥 Download Your PDFs</a>
+    <a href="#" onclick="redirectToDownloadPage(event)" class="download-btn">📥 Download Your PDFs</a>
     
     <div class="info">
       📝 You will receive a download link on your email shortly.<br>
@@ -45,18 +45,57 @@
   </div>
 
   <script>
-    // Auto-detect if coming from Razorpay with order ID
-    const params = new URLSearchParams(window.location.search);
-    const orderId = params.get('order_id') || params.get('razorpay_order_id') || params.get('order');
-    
-    if (orderId) {
-      // Update download button with actual order ID
-      document.querySelector('.download-btn').href = '/download-combo?order=' + orderId;
-      // Store order info
-      localStorage.setItem('verified_order', JSON.stringify({
-        orderId: orderId,
-        productId: 'prod_003'
-      }));
+    // Function to create order and redirect to download page
+    function redirectToDownloadPage(event) {
+      event.preventDefault();
+      
+      const btn = document.querySelector('.download-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Creating order...';
+      
+      // Check if we already have an order ID
+      const params = new URLSearchParams(window.location.search);
+      let orderId = params.get('order_id') || params.get('razorpay_order_id') || params.get('order');
+      
+      if (orderId) {
+        // Already have order, redirect directly
+        window.location.href = '/download-combo?order=' + orderId;
+        return;
+      }
+      
+      // Create order on backend
+      fetch('/api/create-order-from-success', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: 'prod_003',
+          customerEmail: 'user@tnpsc.in',
+          customerName: 'TNPSC User'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.order) {
+          console.log('Order created:', data.order.id);
+          // Store order info
+          localStorage.setItem('verified_order', JSON.stringify({
+            orderId: data.order.id,
+            productId: 'prod_003'
+          }));
+          // Redirect to download page
+          window.location.href = '/download-combo?order=' + data.order.id;
+        } else {
+          alert('Error creating order. Please try again.');
+          btn.disabled = false;
+          btn.textContent = '📥 Download Your PDFs';
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        alert('Error creating order. Please try again.');
+        btn.disabled = false;
+        btn.textContent = '📥 Download Your PDFs';
+      });
     }
   </script>
 </body>

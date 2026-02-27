@@ -299,6 +299,44 @@ app.post('/api/verify-payment', async (req, res) => {
   }
 });
 
+// Create order on-demand from success page (for Razorpay redirects)
+app.post('/api/create-order-from-success', (req, res) => {
+  try {
+    const { productId, customerEmail, customerName } = req.body;
+    
+    if (!productId) {
+      return res.status(400).json({ error: 'Product ID required' });
+    }
+    
+    const products = readJSONFile(PRODUCTS_FILE);
+    const product = products.find(p => p.id === productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    const orders = readJSONFile(ORDERS_FILE);
+    const newOrder = {
+      id: 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      productId: productId,
+      customerEmail: customerEmail || 'success-page@tnpsc.in',
+      customerName: customerName || 'TNPSC User',
+      amount: product.price,
+      status: 'completed',
+      createdAt: new Date().toISOString()
+    };
+    
+    orders.push(newOrder);
+    writeJSONFile(ORDERS_FILE, orders);
+    console.log('Order created from success page:', newOrder.id);
+    
+    res.json({ success: true, order: newOrder, downloadUrl: `/download/${newOrder.id}` });
+  } catch (error) {
+    console.error('Error creating order from success page:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
 // Get order by ID
 app.get('/api/order/:orderId', (req, res) => {
   const orders = readJSONFile(ORDERS_FILE);
